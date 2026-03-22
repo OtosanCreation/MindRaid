@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 
 from hyperliquid.info import Info
 
-COINS       = ["BTC", "ETH", "SOL"]
+COINS       = ["BTC", "ETH", "SOL", "DOGE", "XRP"]
 VENUE       = "HlPerp"
 TAKER_RT    = 0.00035 * 2   # 往復 taker 0.07%
 MAKER_RT    = 0.00010 * 2   # 往復 maker 0.02%

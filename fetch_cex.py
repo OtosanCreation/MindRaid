@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 
 from hyperliquid.info import Info
 
-COINS        = ["BTC", "ETH", "SOL"]
+COINS        = ["BTC", "ETH", "SOL", "DOGE", "XRP"]
 TARGET_VENUE = "BybitPerp"
 DATA_DIR     = os.path.join(os.path.dirname(__file__), "data")
 CSV_PATH     = os.path.join(DATA_DIR, "cex_log.csv")
