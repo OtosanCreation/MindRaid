@@ -72,6 +72,7 @@ def build_tweet(total, taker_n, long_top, short_top, now_str):
         "",
         f"TAKER超え: {taker_n}銘柄 / {total}銘柄",
         "",
+        "※データ提供のみ。投資判断はご自身で。",
         "#Hyperliquid #FundingRate #仮想通貨 #アービトラージ #ClaudeCode",
     ]
     return "\n".join(lines)
