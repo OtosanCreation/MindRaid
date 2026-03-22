@@ -1,1 +1,2 @@
 hyperliquid-python-sdk
+ccxt

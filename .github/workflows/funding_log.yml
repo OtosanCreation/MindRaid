@@ -26,10 +26,13 @@ jobs:
       - name: Run funding logger
         run: python funding_logger.py
 
-      - name: Commit and push CSV
+      - name: Run CEX logger
+        run: python fetch_cex.py
+
+      - name: Commit and push CSVs
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/funding_log.csv
+          git add data/funding_log.csv data/cex_log.csv
           git diff --staged --quiet || git commit -m "log: funding $(date -u '+%Y-%m-%d %H:%M UTC')"
           git push
