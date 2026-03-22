@@ -1,9 +1,11 @@
 """
 fetch_cex.py
-Bybit の予測ファンディングレートを CCXT 経由で取得して CSV に追記する。
+Hyperliquid の predictedFundings から BybitPerp レートを取得して CSV に追記する。
 BTC / ETH / SOL を対象。精算間隔 8h。
 GitHub Actions から毎時呼び出す想定。
-※ Binance は GitHub Actions の US サーバーから地理的にブロックされるため Bybit を使用。
+
+※ Bybit / Binance の API は GitHub Actions の US サーバーから地理的にブロックされるため
+  Hyperliquid が集約している BybitPerp レートを使用する。
 
 CSV: data/cex_log.csv
 列 : timestamp_utc, coin, exchange, funding_rate_8h, funding_rate_1h, funding_rate_24h
@@ -13,41 +15,39 @@ import csv
 import os
 from datetime import datetime, timezone
 
-import ccxt
+from hyperliquid.info import Info
 
-COINS = {
-    "BTC": "BTC/USDT:USDT",
-    "ETH": "ETH/USDT:USDT",
-    "SOL": "SOL/USDT:USDT",
-}
-INTERVAL_HOURS = 8
-DATA_DIR  = os.path.join(os.path.dirname(__file__), "data")
-CSV_PATH  = os.path.join(DATA_DIR, "cex_log.csv")
-FIELDNAMES = [
+COINS        = ["BTC", "ETH", "SOL"]
+TARGET_VENUE = "BybitPerp"
+DATA_DIR     = os.path.join(os.path.dirname(__file__), "data")
+CSV_PATH     = os.path.join(DATA_DIR, "cex_log.csv")
+FIELDNAMES   = [
     "timestamp_utc", "coin", "exchange",
     "funding_rate_8h", "funding_rate_1h", "funding_rate_24h",
 ]
 
 
-def fetch_bybit_funding() -> list[dict]:
-    exchange = ccxt.bybit()
-    symbols  = list(COINS.values())
-    rates    = exchange.fetch_funding_rates(symbols)
-    result   = []
-    for coin, symbol in COINS.items():
-        data    = rates.get(symbol, {})
-        rate_8h = data.get("fundingRate")
-        if rate_8h is None:
+def fetch_bybit_funding(info: Info) -> list[dict]:
+    raw    = info.post("/info", {"type": "predictedFundings"})
+    result = []
+    for item in raw:
+        coin, venues = item[0], item[1]
+        if coin not in COINS:
             continue
-        rate_1h  = rate_8h / INTERVAL_HOURS
-        rate_24h = rate_1h * 24
-        result.append({
-            "coin":             coin,
-            "exchange":         "Bybit",
-            "funding_rate_8h":  rate_8h,
-            "funding_rate_1h":  rate_1h,
-            "funding_rate_24h": rate_24h,
-        })
+        for venue_name, data in venues:
+            if venue_name != TARGET_VENUE:
+                continue
+            rate_8h  = float(data["fundingRate"])
+            interval = int(data["fundingIntervalHours"])   # BybitPerp = 8h
+            rate_1h  = rate_8h / interval
+            rate_24h = rate_1h * 24
+            result.append({
+                "coin":             coin,
+                "exchange":         "BybitPerp",
+                "funding_rate_8h":  rate_8h,
+                "funding_rate_1h":  rate_1h,
+                "funding_rate_24h": rate_24h,
+            })
     return result
 
 
@@ -64,7 +64,8 @@ def append_csv(rows: list[dict], ts: str) -> None:
 
 def main() -> None:
     ts   = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
-    rows = fetch_bybit_funding()
+    info = Info(skip_ws=True)
+    rows = fetch_bybit_funding(info)
     append_csv(rows, ts)
     for r in rows:
         print(f"[{ts}] {r['coin']:<4}  1h={r['funding_rate_1h']:+.6f}  "
