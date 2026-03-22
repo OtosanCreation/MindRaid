@@ -1,0 +1,4 @@
+timestamp_utc,coin,exchange,funding_rate_8h,funding_rate_1h,funding_rate_24h
+2026-03-22 08:29:38,BTC,BybitPerp,-9.042e-05,-1.13025e-05,-0.00027126
+2026-03-22 08:29:38,ETH,BybitPerp,-2.899e-05,-3.62375e-06,-8.696999999999999e-05
+2026-03-22 08:29:38,SOL,BybitPerp,-0.00013617,-1.702125e-05,-0.00040850999999999995
