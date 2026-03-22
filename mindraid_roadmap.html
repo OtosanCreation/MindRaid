@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MindRaid ロードマップ</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0a0a; color: #e0e0e0; font-family: "Courier New", monospace; padding: 40px 20px; }
+  .header { text-align: center; margin-bottom: 60px; }
+  .header h1 { font-size: 2.4em; color: #f5a623; letter-spacing: 4px; margin-bottom: 8px; }
+  .header p { color: #888; font-size: 0.95em; }
+  .timeline { max-width: 800px; margin: 0 auto; position: relative; }
+  .timeline::before { content: ""; position: absolute; left: 28px; top: 0; bottom: 0; width: 2px; background: linear-gradient(to bottom, #f5a623, #333); }
+  .phase { position: relative; margin-bottom: 40px; padding-left: 70px; }
+  .phase-dot { position: absolute; left: 18px; top: 12px; width: 22px; height: 22px; border-radius: 50%; border: 2px solid #444; background: #0a0a0a; display: flex; align-items: center; justify-content: center; font-size: 0.75em; }
+  .phase.done .phase-dot { background: #2ecc71; border-color: #2ecc71; box-shadow: 0 0 10px #2ecc71aa; }
+  .phase.active .phase-dot { background: #f5a623; border-color: #f5a623; box-shadow: 0 0 10px #f5a623; animation: pulse 1.5s infinite; }
+  .phase.pending .phase-dot { background: #222; border-color: #444; }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 10px #f5a623aa}50%{box-shadow:0 0 22px #f5a623} }
+  .phase-card { background: #111; border: 1px solid #222; border-radius: 8px; padding: 20px 24px; }
+  .phase.done .phase-card { border-color: #2ecc7144; }
+  .phase.active .phase-card { border-color: #f5a62344; }
+  .phase-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  .phase-tag { font-size: 0.7em; padding: 2px 10px; border-radius: 20px; font-weight: bold; letter-spacing: 1px; }
+  .tag-done { background: #2ecc7122; color: #2ecc71; border: 1px solid #2ecc7144; }
+  .tag-active { background: #f5a62322; color: #f5a623; border: 1px solid #f5a62344; }
+  .tag-pending { background: #22222244; color: #666; border: 1px solid #333; }
+  .phase-title { font-size: 1.05em; color: #fff; font-weight: bold; }
+  .phase-meta { font-size: 0.75em; color: #555; margin-left: auto; }
+  .tasks { list-style: none; margin-top: 4px; }
+  .tasks li { padding: 5px 0; font-size: 0.87em; color: #999; display: flex; gap: 8px; }
+  .tasks li .icon { flex-shrink: 0; }
+  .tasks li.done-task { color: #555; text-decoration: line-through; }
+  .tasks li.done-task .icon { color: #2ecc71; }
+  .tasks li.active-task { color: #f5a623; }
+  .tasks li.active-task .icon { color: #f5a623; }
+  .tasks li.todo .icon { color: #444; }
+  .profit-box { margin-top: 14px; background: #0d1a0d; border: 1px solid #2ecc7122; border-radius: 6px; padding: 12px 16px; font-size: 0.82em; }
+  .profit-box .label { color: #555; margin-bottom: 4px; }
+  .profit-box .value { color: #2ecc71; font-size: 1.1em; }
+  .warn-box { margin-top: 12px; background: #1a1300; border: 1px solid #f5a62322; border-radius: 6px; padding: 10px 14px; font-size: 0.8em; color: #f5a623aa; }
+  .summary { max-width: 800px; margin: 40px auto 0; background: #111; border: 1px solid #f5a62333; border-radius: 8px; padding: 24px; text-align: center; }
+  .summary h2 { color: #f5a623; margin-bottom: 16px; font-size: 1em; letter-spacing: 2px; }
+  .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .s-label { font-size: 0.75em; color: #555; margin-bottom: 4px; }
+  .s-value { font-size: 1.2em; color: #fff; }
+  .footer { text-align: center; margin-top: 40px; color: #333; font-size: 0.75em; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>⚡ MindRaid</h1>
+  <p>非エンジニアが Claude Code で作る アービトラージシステム</p>
+  <p style="color:#444;margin-top:6px;font-size:0.8em;">2026-03-23 更新</p>
+</div>
+
+<div class="timeline">
+
+  <div class="phase done">
+    <div class="phase-dot">✓</div>
+    <div class="phase-card">
+      <div class="phase-header">
+        <span class="phase-tag tag-done">DONE</span>
+        <span class="phase-title">Phase 1 ── 基盤構築</span>
+        <span class="phase-meta">Day 1</span>
+      </div>
+      <ul class="tasks">
+        <li class="done-task"><span class="icon">✓</span>Hyperliquid 229銘柄 Funding Rate スキャナー</li>
+        <li class="done-task"><span class="icon">✓</span>GitHub Actions で毎時自動ログ収集</li>
+        <li class="done-task"><span class="icon">✓</span>Google Cloud VM (e2-micro) セットアップ</li>
+        <li class="done-task"><span class="icon">✓</span>HL × MEXC リアルタイムアービトラージダッシュボード</li>
+        <li class="done-task"><span class="icon">✓</span>Twitter (@logiQ_Alpha) で初投稿</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="phase active">
+    <div class="phase-dot">▶</div>
+    <div class="phase-card">
+      <div class="phase-header">
+        <span class="phase-tag tag-active">IN PROGRESS</span>
+        <span class="phase-title">Phase 2 ── 自動化 &amp; 発信</span>
+        <span class="phase-meta">〜 Week 1</span>
+      </div>
+      <ul class="tasks">
+        <li class="done-task"><span class="icon">✓</span>ダッシュボード画像の自動生成（Pillow）</li>
+        <li class="done-task"><span class="icon">✓</span>X API 連携 → 毎時自動ツイート（画像付き）</li>
+        <li class="active-task"><span class="icon">▶</span>Telegram アラート（鞘が閾値超えたら即通知）</li>
+        <li class="todo"><span class="icon">▸</span>銘柄追加（DOGE / XRP / SOL 等）</li>
+        <li class="todo"><span class="icon">▸</span>フォロワー 100 人突破</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="phase pending">
+    <div class="phase-dot"></div>
+    <div class="phase-card">
+      <div class="phase-header">
+        <span class="phase-tag tag-pending">NEXT</span>
+        <span class="phase-title">Phase 3 ── 小規模テスト運用</span>
+        <span class="phase-meta">〜 Week 2-3</span>
+      </div>
+      <ul class="tasks">
+        <li class="todo"><span class="icon">▸</span>Bitflyer → HL / MEXC へ <strong style="color:#fff">0.5 ETH</strong> 送金</li>
+        <li class="todo"><span class="icon">▸</span>デルタニュートラル両建てポジション構築</li>
+        <li class="todo"><span class="icon">▸</span>FR差収益の実測（理論値 vs 実績）</li>
+        <li class="todo"><span class="icon">▸</span>手数料・スリッページの実データ収集</li>
+        <li class="todo"><span class="icon">▸</span>損益ログの自動記録</li>
+      </ul>
+      <div class="profit-box">
+        <div class="label">テスト規模の収益試算（0.5 ETH @ FR差 0.007%/h）</div>
+        <div class="value">約 $1.7/日 ≈ 250円/日</div>
+      </div>
+      <div class="warn-box">⚠ 利益より「仕組みの検証」が目的。数字より動作確認を優先。</div>
+    </div>
+  </div>
+
+  <div class="phase pending">
+    <div class="phase-dot"></div>
+    <div class="phase-card">
+      <div class="phase-header">
+        <span class="phase-tag tag-pending">PLANNED</span>
+        <span class="phase-title">Phase 4 ── スケールアップ</span>
+        <span class="phase-meta">〜 Month 2</span>
+      </div>
+      <ul class="tasks">
+        <li class="todo"><span class="icon">▸</span>テスト結果を検証 → 規模拡大の判断</li>
+        <li class="todo"><span class="icon">▸</span>5 ETH → 段階的に増やす</li>
+        <li class="todo"><span class="icon">▸</span>自動リバランス（FR がマイナスに転じたら自動決済）</li>
+        <li class="todo"><span class="icon">▸</span>BTC / ETH / SOL 同時運用</li>
+        <li class="todo"><span class="icon">▸</span>X フォロワー 500人 → 収益化申請</li>
+      </ul>
+      <div class="profit-box">
+        <div class="label">5 ETH 運用時の試算</div>
+        <div class="value">約 $17/日 ≈ 2,500円/日</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="phase pending">
+    <div class="phase-dot"></div>
+    <div class="phase-card">
+      <div class="phase-header">
+        <span class="phase-tag tag-pending">FUTURE</span>
+        <span class="phase-title">Phase 5 ── フル自動化 &amp; 収益化</span>
+        <span class="phase-meta">〜 Month 3+</span>
+      </div>
+      <ul class="tasks">
+        <li class="todo"><span class="icon">▸</span>29 ETH フル運用（条件が整った場合）</li>
+        <li class="todo"><span class="icon">▸</span>有料 Discord / note でシグナル販売</li>
+        <li class="todo"><span class="icon">▸</span>X 広告収益 + スポンサー</li>
+        <li class="todo"><span class="icon">▸</span>ダッシュボード SaaS 化</li>
+      </ul>
+      <div class="profit-box">
+        <div class="label">29 ETH フル運用の試算</div>
+        <div class="value">約 $100/日 ≈ 15,000円/日 ≈ 45万円/月</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="summary">
+  <h2>── 現在地サマリー ──</h2>
+  <div class="summary-grid">
+    <div>
+      <div class="s-label">フェーズ</div>
+      <div class="s-value">1 / 5 完了</div>
+    </div>
+    <div>
+      <div class="s-label">保有資産</div>
+      <div class="s-value">29.38 ETH</div>
+    </div>
+    <div>
+      <div class="s-label">次のアクション</div>
+      <div class="s-value" style="font-size:0.9em;">Telegramアラート実装</div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  MindRaid | AI予測 × 仮想通貨取引 @logiQ_Alpha ── Built with Claude Code
+</div>
+
+</body>
+</html>
