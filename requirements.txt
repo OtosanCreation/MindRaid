@@ -1,1 +1,4 @@
 hyperliquid-python-sdk
+ccxt
+Pillow
+tweepy
