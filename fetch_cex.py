@@ -1,8 +1,9 @@
 """
 fetch_cex.py
-Binance の予測ファンディングレートを CCXT 経由で取得して CSV に追記する。
+Bybit の予測ファンディングレートを CCXT 経由で取得して CSV に追記する。
 BTC / ETH / SOL を対象。精算間隔 8h。
 GitHub Actions から毎時呼び出す想定。
+※ Binance は GitHub Actions の US サーバーから地理的にブロックされるため Bybit を使用。
 
 CSV: data/cex_log.csv
 列 : timestamp_utc, coin, exchange, funding_rate_8h, funding_rate_1h, funding_rate_24h
@@ -28,8 +29,8 @@ FIELDNAMES = [
 ]
 
 
-def fetch_binance_funding() -> list[dict]:
-    exchange = ccxt.binance()
+def fetch_bybit_funding() -> list[dict]:
+    exchange = ccxt.bybit()
     symbols  = list(COINS.values())
     rates    = exchange.fetch_funding_rates(symbols)
     result   = []
@@ -42,7 +43,7 @@ def fetch_binance_funding() -> list[dict]:
         rate_24h = rate_1h * 24
         result.append({
             "coin":             coin,
-            "exchange":         "Binance",
+            "exchange":         "Bybit",
             "funding_rate_8h":  rate_8h,
             "funding_rate_1h":  rate_1h,
             "funding_rate_24h": rate_24h,
@@ -63,7 +64,7 @@ def append_csv(rows: list[dict], ts: str) -> None:
 
 def main() -> None:
     ts   = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
-    rows = fetch_binance_funding()
+    rows = fetch_bybit_funding()
     append_csv(rows, ts)
     for r in rows:
         print(f"[{ts}] {r['coin']:<4}  1h={r['funding_rate_1h']:+.6f}  "
