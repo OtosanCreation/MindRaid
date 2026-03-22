@@ -40,3 +40,27 @@
 [2026-03-21 09:07:00] ETH   1h=+0.000001  8h=+0.000007       -
 [2026-03-21 09:07:00] SOL   1h=+0.000001  8h=+0.000007       -
 → Appended 3 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-22 09:07:01] BTC   1h=-0.000007  8h=-0.000053       -
+[2026-03-22 09:07:01] ETH   1h=+0.000004  8h=+0.000031       -
+[2026-03-22 09:07:01] SOL   1h=-0.000035  8h=-0.000283       -
+→ Appended 3 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-22 12:07:01] BTC   1h=-0.000028  8h=-0.000223       -
+[2026-03-22 12:07:01] ETH   1h=-0.000013  8h=-0.000105       -
+[2026-03-22 12:07:01] SOL   1h=-0.000052  8h=-0.000415       -
+→ Appended 3 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-22 13:07:00] BTC   1h=-0.000003  8h=-0.000023       -
+[2026-03-22 13:07:00] ETH   1h=+0.000001  8h=+0.000009       -
+[2026-03-22 13:07:00] SOL   1h=-0.000047  8h=-0.000376       -
+→ Appended 3 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-22 15:07:00] BTC   1h=-0.000004  8h=-0.000029       -
+[2026-03-22 15:07:00] ETH   1h=-0.000000  8h=-0.000004       -
+[2026-03-22 15:07:00] SOL   1h=-0.000029  8h=-0.000230       -
+→ Appended 3 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
