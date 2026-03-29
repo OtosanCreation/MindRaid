@@ -64,3 +64,659 @@
 [2026-03-22 15:07:00] ETH   1h=-0.000000  8h=-0.000004       -
 [2026-03-22 15:07:00] SOL   1h=-0.000029  8h=-0.000230       -
 → Appended 3 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-23 12:07:00] BTC   1h=-0.000015  8h=-0.000121       -
+[2026-03-23 12:07:00] DOGE  1h=+0.000010  8h=+0.000079       -
+[2026-03-23 12:07:00] ETH   1h=-0.000017  8h=-0.000136       -
+[2026-03-23 12:07:00] SOL   1h=-0.000002  8h=-0.000015       -
+[2026-03-23 12:07:00] XRP   1h=-0.000008  8h=-0.000064       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-23 13:07:00] BTC   1h=-0.000001  8h=-0.000009       -
+[2026-03-23 13:07:00] DOGE  1h=-0.000009  8h=-0.000068       -
+[2026-03-23 13:07:00] ETH   1h=+0.000000  8h=+0.000000       -
+[2026-03-23 13:07:00] SOL   1h=+0.000005  8h=+0.000037       -
+[2026-03-23 13:07:00] XRP   1h=-0.000017  8h=-0.000136       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-23 14:07:00] BTC   1h=-0.000003  8h=-0.000022       -
+[2026-03-23 14:07:00] DOGE  1h=+0.000007  8h=+0.000060       -
+[2026-03-23 14:07:00] ETH   1h=+0.000006  8h=+0.000047       -
+[2026-03-23 14:07:00] SOL   1h=+0.000012  8h=+0.000095       -
+[2026-03-23 14:07:00] XRP   1h=-0.000013  8h=-0.000100       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-23 15:07:00] BTC   1h=-0.000012  8h=-0.000094       -
+[2026-03-23 15:07:00] DOGE  1h=+0.000008  8h=+0.000063       -
+[2026-03-23 15:07:00] ETH   1h=-0.000007  8h=-0.000054       -
+[2026-03-23 15:07:00] SOL   1h=+0.000006  8h=+0.000050       -
+[2026-03-23 15:07:00] XRP   1h=+0.000001  8h=+0.000007       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-23 16:07:00] BTC   1h=+0.000008  8h=+0.000064       -
+[2026-03-23 16:07:00] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-23 16:07:00] ETH   1h=+0.000002  8h=+0.000016       -
+[2026-03-23 16:07:00] SOL   1h=-0.000007  8h=-0.000057       -
+[2026-03-23 16:07:00] XRP   1h=+0.000009  8h=+0.000068       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-23 17:07:00] BTC   1h=-0.000003  8h=-0.000027       -
+[2026-03-23 17:07:00] DOGE  1h=+0.000010  8h=+0.000078       -
+[2026-03-23 17:07:00] ETH   1h=+0.000005  8h=+0.000042       -
+[2026-03-23 17:07:00] SOL   1h=-0.000010  8h=-0.000078       -
+[2026-03-23 17:07:00] XRP   1h=+0.000008  8h=+0.000062       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-23 18:07:01] BTC   1h=-0.000000  8h=-0.000000       -
+[2026-03-23 18:07:01] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-23 18:07:01] ETH   1h=+0.000009  8h=+0.000070       -
+[2026-03-23 18:07:01] SOL   1h=-0.000035  8h=-0.000283       -
+[2026-03-23 18:07:01] XRP   1h=+0.000005  8h=+0.000041       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-23 19:07:00] BTC   1h=-0.000014  8h=-0.000108       -
+[2026-03-23 19:07:00] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-23 19:07:00] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-23 19:07:00] SOL   1h=-0.000031  8h=-0.000248       -
+[2026-03-23 19:07:00] XRP   1h=+0.000013  8h=+0.000100       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-23 20:07:00] BTC   1h=-0.000010  8h=-0.000081       -
+[2026-03-23 20:07:00] DOGE  1h=+0.000008  8h=+0.000063       -
+[2026-03-23 20:07:00] ETH   1h=+0.000008  8h=+0.000061       -
+[2026-03-23 20:07:00] SOL   1h=-0.000028  8h=-0.000224       -
+[2026-03-23 20:07:00] XRP   1h=+0.000008  8h=+0.000061       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-23 21:07:01] BTC   1h=+0.000001  8h=+0.000010       -
+[2026-03-23 21:07:01] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-23 21:07:01] ETH   1h=+0.000008  8h=+0.000062       -
+[2026-03-23 21:07:01] SOL   1h=-0.000027  8h=-0.000216       -
+[2026-03-23 21:07:01] XRP   1h=+0.000011  8h=+0.000084       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-24 13:07:00] BTC   1h=+0.000004  8h=+0.000030       -
+[2026-03-24 13:07:00] DOGE  1h=-0.000004  8h=-0.000029       -
+[2026-03-24 13:07:00] ETH   1h=+0.000000  8h=+0.000003       -
+[2026-03-24 13:07:00] SOL   1h=-0.000007  8h=-0.000056       -
+[2026-03-24 13:07:00] XRP   1h=+0.000003  8h=+0.000022       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-24 14:07:00] BTC   1h=-0.000007  8h=-0.000060       -
+[2026-03-24 14:07:00] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-24 14:07:00] ETH   1h=+0.000004  8h=+0.000035       -
+[2026-03-24 14:07:00] SOL   1h=+0.000005  8h=+0.000043       -
+[2026-03-24 14:07:00] XRP   1h=-0.000005  8h=-0.000041       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-24 15:07:01] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-24 15:07:01] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-24 15:07:01] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-24 15:07:01] SOL   1h=+0.000006  8h=+0.000051       -
+[2026-03-24 15:07:01] XRP   1h=+0.000004  8h=+0.000029       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-24 16:07:00] BTC   1h=+0.000005  8h=+0.000042       -
+[2026-03-24 16:07:00] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-24 16:07:00] ETH   1h=+0.000006  8h=+0.000046       -
+[2026-03-24 16:07:00] SOL   1h=-0.000006  8h=-0.000048       -
+[2026-03-24 16:07:00] XRP   1h=-0.000002  8h=-0.000013       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-24 17:07:00] BTC   1h=-0.000004  8h=-0.000030       -
+[2026-03-24 17:07:00] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-24 17:07:00] ETH   1h=-0.000001  8h=-0.000008       -
+[2026-03-24 17:07:00] SOL   1h=-0.000006  8h=-0.000050       -
+[2026-03-24 17:07:00] XRP   1h=-0.000009  8h=-0.000073       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-24 18:07:01] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-24 18:07:01] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-24 18:07:01] ETH   1h=+0.000009  8h=+0.000074       -
+[2026-03-24 18:07:01] SOL   1h=-0.000013  8h=-0.000105       -
+[2026-03-24 18:07:01] XRP   1h=-0.000009  8h=-0.000075       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-24 19:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-24 19:07:00] DOGE  1h=+0.000011  8h=+0.000085       -
+[2026-03-24 19:07:00] ETH   1h=+0.000009  8h=+0.000069       -
+[2026-03-24 19:07:00] SOL   1h=-0.000017  8h=-0.000139       -
+[2026-03-24 19:07:00] XRP   1h=-0.000039  8h=-0.000315       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-24 20:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-24 20:07:00] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-24 20:07:00] ETH   1h=+0.000010  8h=+0.000082       -
+[2026-03-24 20:07:00] SOL   1h=-0.000010  8h=-0.000080       -
+[2026-03-24 20:07:00] XRP   1h=-0.000029  8h=-0.000231       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-24 21:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-24 21:07:00] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-24 21:07:00] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-24 21:07:00] SOL   1h=+0.000011  8h=+0.000087       -
+[2026-03-24 21:07:00] XRP   1h=-0.000015  8h=-0.000120       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-24 22:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-24 22:07:00] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-24 22:07:00] ETH   1h=+0.000010  8h=+0.000081       -
+[2026-03-24 22:07:00] SOL   1h=+0.000013  8h=+0.000100       -
+[2026-03-24 22:07:00] XRP   1h=-0.000012  8h=-0.000094       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-24 23:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-24 23:07:00] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-24 23:07:00] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-24 23:07:00] SOL   1h=+0.000007  8h=+0.000055       -
+[2026-03-24 23:07:00] XRP   1h=-0.000004  8h=-0.000036       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-25 12:07:01] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-25 12:07:01] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-25 12:07:01] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-25 12:07:01] SOL   1h=-0.000012  8h=-0.000095       -
+[2026-03-25 12:07:01] XRP   1h=+0.000013  8h=+0.000100       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-25 13:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-25 13:07:00] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-25 13:07:00] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-25 13:07:00] SOL   1h=-0.000013  8h=-0.000103       -
+[2026-03-25 13:07:00] XRP   1h=-0.000002  8h=-0.000019       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-25 14:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-25 14:07:00] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-25 14:07:00] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-25 14:07:00] SOL   1h=-0.000012  8h=-0.000094       -
+[2026-03-25 14:07:00] XRP   1h=-0.000008  8h=-0.000066       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-25 15:07:01] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-25 15:07:01] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-25 15:07:01] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-25 15:07:01] SOL   1h=-0.000003  8h=-0.000026       -
+[2026-03-25 15:07:01] XRP   1h=-0.000002  8h=-0.000015       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-25 16:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-25 16:07:00] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-25 16:07:00] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-25 16:07:00] SOL   1h=-0.000000  8h=-0.000003       -
+[2026-03-25 16:07:00] XRP   1h=+0.000007  8h=+0.000053       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-25 17:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-25 17:07:00] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-25 17:07:00] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-25 17:07:00] SOL   1h=-0.000004  8h=-0.000030       -
+[2026-03-25 17:07:00] XRP   1h=+0.000012  8h=+0.000097       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-25 18:07:01] BTC   1h=+0.000007  8h=+0.000057       -
+[2026-03-25 18:07:01] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-25 18:07:01] ETH   1h=+0.000011  8h=+0.000091       -
+[2026-03-25 18:07:01] SOL   1h=-0.000003  8h=-0.000022       -
+[2026-03-25 18:07:01] XRP   1h=+0.000009  8h=+0.000070       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-25 19:07:00] BTC   1h=+0.000011  8h=+0.000092       -
+[2026-03-25 19:07:00] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-25 19:07:00] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-25 19:07:00] SOL   1h=-0.000005  8h=-0.000039       -
+[2026-03-25 19:07:00] XRP   1h=+0.000004  8h=+0.000034       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-25 20:07:00] BTC   1h=+0.000004  8h=+0.000034       -
+[2026-03-25 20:07:00] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-25 20:07:00] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-25 20:07:00] SOL   1h=-0.000005  8h=-0.000037       -
+[2026-03-25 20:07:00] XRP   1h=+0.000002  8h=+0.000019       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-25 21:07:00] BTC   1h=+0.000008  8h=+0.000065       -
+[2026-03-25 21:07:00] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-25 21:07:00] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-25 21:07:00] SOL   1h=-0.000007  8h=-0.000057       -
+[2026-03-25 21:07:00] XRP   1h=+0.000006  8h=+0.000051       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-26 13:07:00] BTC   1h=+0.000012  8h=+0.000100       -
+[2026-03-26 13:07:00] DOGE  1h=+0.000009  8h=+0.000075       -
+[2026-03-26 13:07:00] ETH   1h=-0.000005  8h=-0.000042       -
+[2026-03-26 13:07:00] SOL   1h=-0.000015  8h=-0.000120       -
+[2026-03-26 13:07:00] XRP   1h=-0.000023  8h=-0.000185       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-26 14:07:01] BTC   1h=+0.000006  8h=+0.000046       -
+[2026-03-26 14:07:01] DOGE  1h=+0.000006  8h=+0.000051       -
+[2026-03-26 14:07:01] ETH   1h=-0.000013  8h=-0.000103       -
+[2026-03-26 14:07:01] SOL   1h=-0.000019  8h=-0.000156       -
+[2026-03-26 14:07:01] XRP   1h=-0.000007  8h=-0.000057       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-26 15:07:01] BTC   1h=+0.000010  8h=+0.000080       -
+[2026-03-26 15:07:01] DOGE  1h=-0.000008  8h=-0.000063       -
+[2026-03-26 15:07:01] ETH   1h=-0.000003  8h=-0.000020       -
+[2026-03-26 15:07:01] SOL   1h=-0.000034  8h=-0.000274       -
+[2026-03-26 15:07:01] XRP   1h=-0.000016  8h=-0.000125       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-26 16:07:01] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-26 16:07:01] DOGE  1h=-0.000006  8h=-0.000048       -
+[2026-03-26 16:07:01] ETH   1h=+0.000001  8h=+0.000007       -
+[2026-03-26 16:07:01] SOL   1h=-0.000012  8h=-0.000092       -
+[2026-03-26 16:07:01] XRP   1h=-0.000005  8h=-0.000044       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-26 17:07:01] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-26 17:07:01] DOGE  1h=-0.000006  8h=-0.000052       -
+[2026-03-26 17:07:01] ETH   1h=+0.000003  8h=+0.000028       -
+[2026-03-26 17:07:01] SOL   1h=-0.000008  8h=-0.000061       -
+[2026-03-26 17:07:01] XRP   1h=-0.000006  8h=-0.000045       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-26 18:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-26 18:07:00] DOGE  1h=-0.000003  8h=-0.000025       -
+[2026-03-26 18:07:00] ETH   1h=-0.000008  8h=-0.000068       -
+[2026-03-26 18:07:00] SOL   1h=-0.000004  8h=-0.000035       -
+[2026-03-26 18:07:00] XRP   1h=-0.000018  8h=-0.000141       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-26 19:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-26 19:07:00] DOGE  1h=-0.000013  8h=-0.000105       -
+[2026-03-26 19:07:00] ETH   1h=+0.000002  8h=+0.000018       -
+[2026-03-26 19:07:00] SOL   1h=-0.000023  8h=-0.000181       -
+[2026-03-26 19:07:00] XRP   1h=-0.000020  8h=-0.000157       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-26 20:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-26 20:07:00] DOGE  1h=-0.000014  8h=-0.000112       -
+[2026-03-26 20:07:00] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-26 20:07:00] SOL   1h=-0.000030  8h=-0.000241       -
+[2026-03-26 20:07:00] XRP   1h=-0.000020  8h=-0.000159       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-26 21:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-26 21:07:00] DOGE  1h=-0.000005  8h=-0.000043       -
+[2026-03-26 21:07:00] ETH   1h=-0.000006  8h=-0.000044       -
+[2026-03-26 21:07:00] SOL   1h=-0.000047  8h=-0.000373       -
+[2026-03-26 21:07:00] XRP   1h=-0.000037  8h=-0.000292       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-26 22:07:01] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-26 22:07:01] DOGE  1h=+0.000009  8h=+0.000074       -
+[2026-03-26 22:07:01] ETH   1h=+0.000005  8h=+0.000042       -
+[2026-03-26 22:07:01] SOL   1h=-0.000033  8h=-0.000267       -
+[2026-03-26 22:07:01] XRP   1h=-0.000044  8h=-0.000349       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-26 23:07:01] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-26 23:07:01] DOGE  1h=+0.000004  8h=+0.000030       -
+[2026-03-26 23:07:01] ETH   1h=+0.000011  8h=+0.000085       -
+[2026-03-26 23:07:01] SOL   1h=-0.000042  8h=-0.000339       -
+[2026-03-26 23:07:01] XRP   1h=-0.000040  8h=-0.000322       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-27 00:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-27 00:07:00] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-27 00:07:00] ETH   1h=+0.000011  8h=+0.000087       -
+[2026-03-27 00:07:00] SOL   1h=-0.000018  8h=-0.000141       -
+[2026-03-27 00:07:00] XRP   1h=-0.000034  8h=-0.000271       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-27 01:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-27 01:07:00] DOGE  1h=+0.000008  8h=+0.000065       -
+[2026-03-27 01:07:00] ETH   1h=-0.000001  8h=-0.000007       -
+[2026-03-27 01:07:00] SOL   1h=-0.000012  8h=-0.000095       -
+[2026-03-27 01:07:00] XRP   1h=-0.000027  8h=-0.000212       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-27 02:07:01] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-27 02:07:01] DOGE  1h=+0.000006  8h=+0.000049       -
+[2026-03-27 02:07:01] ETH   1h=+0.000006  8h=+0.000052       -
+[2026-03-27 02:07:01] SOL   1h=-0.000008  8h=-0.000061       -
+[2026-03-27 02:07:01] XRP   1h=-0.000028  8h=-0.000220       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-27 03:07:01] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-27 03:07:01] DOGE  1h=+0.000006  8h=+0.000045       -
+[2026-03-27 03:07:01] ETH   1h=-0.000006  8h=-0.000052       -
+[2026-03-27 03:07:01] SOL   1h=-0.000023  8h=-0.000185       -
+[2026-03-27 03:07:01] XRP   1h=-0.000025  8h=-0.000197       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-27 04:07:00] BTC   1h=+0.000003  8h=+0.000027       -
+[2026-03-27 04:07:00] DOGE  1h=+0.000004  8h=+0.000034       -
+[2026-03-27 04:07:00] ETH   1h=-0.000007  8h=-0.000058       -
+[2026-03-27 04:07:00] SOL   1h=-0.000038  8h=-0.000306       -
+[2026-03-27 04:07:00] XRP   1h=-0.000022  8h=-0.000173       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-27 05:07:00] BTC   1h=+0.000008  8h=+0.000063       -
+[2026-03-27 05:07:00] DOGE  1h=+0.000004  8h=+0.000031       -
+[2026-03-27 05:07:00] ETH   1h=-0.000000  8h=-0.000002       -
+[2026-03-27 05:07:00] SOL   1h=-0.000053  8h=-0.000426       -
+[2026-03-27 05:07:00] XRP   1h=-0.000014  8h=-0.000109       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-27 06:07:00] BTC   1h=+0.000003  8h=+0.000020       -
+[2026-03-27 06:07:00] DOGE  1h=+0.000003  8h=+0.000025       -
+[2026-03-27 06:07:00] ETH   1h=-0.000006  8h=-0.000051       -
+[2026-03-27 06:07:00] SOL   1h=-0.000062  8h=-0.000499       -
+[2026-03-27 06:07:00] XRP   1h=-0.000020  8h=-0.000161       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-27 07:07:00] BTC   1h=+0.000007  8h=+0.000058       -
+[2026-03-27 07:07:00] DOGE  1h=+0.000004  8h=+0.000034       -
+[2026-03-27 07:07:00] ETH   1h=-0.000006  8h=-0.000051       -
+[2026-03-27 07:07:00] SOL   1h=-0.000065  8h=-0.000521       -
+[2026-03-27 07:07:00] XRP   1h=-0.000011  8h=-0.000085       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-27 08:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-27 08:07:00] DOGE  1h=-0.000004  8h=-0.000029       -
+[2026-03-27 08:07:00] ETH   1h=+0.000000  8h=+0.000000       -
+[2026-03-27 08:07:00] SOL   1h=-0.000057  8h=-0.000454       -
+[2026-03-27 08:07:00] XRP   1h=-0.000012  8h=-0.000095       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-27 09:07:00] BTC   1h=+0.000003  8h=+0.000020       -
+[2026-03-27 09:07:00] DOGE  1h=-0.000002  8h=-0.000015       -
+[2026-03-27 09:07:00] ETH   1h=+0.000008  8h=+0.000068       -
+[2026-03-27 09:07:00] SOL   1h=-0.000059  8h=-0.000468       -
+[2026-03-27 09:07:00] XRP   1h=-0.000018  8h=-0.000147       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-27 10:07:00] BTC   1h=+0.000005  8h=+0.000042       -
+[2026-03-27 10:07:00] DOGE  1h=-0.000004  8h=-0.000035       -
+[2026-03-27 10:07:00] ETH   1h=-0.000002  8h=-0.000015       -
+[2026-03-27 10:07:00] SOL   1h=-0.000051  8h=-0.000411       -
+[2026-03-27 10:07:00] XRP   1h=-0.000007  8h=-0.000057       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-27 11:07:01] BTC   1h=+0.000010  8h=+0.000078       -
+[2026-03-27 11:07:01] DOGE  1h=-0.000008  8h=-0.000067       -
+[2026-03-27 11:07:01] ETH   1h=-0.000024  8h=-0.000191       -
+[2026-03-27 11:07:01] SOL   1h=-0.000063  8h=-0.000505       -
+[2026-03-27 11:07:01] XRP   1h=-0.000008  8h=-0.000066       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-27 12:07:00] BTC   1h=+0.000003  8h=+0.000028       -
+[2026-03-27 12:07:00] DOGE  1h=-0.000010  8h=-0.000077       -
+[2026-03-27 12:07:00] ETH   1h=-0.000022  8h=-0.000177       -
+[2026-03-27 12:07:00] SOL   1h=-0.000066  8h=-0.000524       -
+[2026-03-27 12:07:00] XRP   1h=-0.000001  8h=-0.000004       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-27 13:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-27 13:07:00] DOGE  1h=-0.000003  8h=-0.000023       -
+[2026-03-27 13:07:00] ETH   1h=-0.000026  8h=-0.000205       -
+[2026-03-27 13:07:00] SOL   1h=-0.000052  8h=-0.000414       -
+[2026-03-27 13:07:00] XRP   1h=+0.000001  8h=+0.000005       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-27 14:07:01] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-27 14:07:01] DOGE  1h=+0.000002  8h=+0.000018       -
+[2026-03-27 14:07:01] ETH   1h=-0.000034  8h=-0.000272       -
+[2026-03-27 14:07:01] SOL   1h=-0.000055  8h=-0.000438       -
+[2026-03-27 14:07:01] XRP   1h=-0.000003  8h=-0.000028       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-27 15:07:01] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-27 15:07:01] DOGE  1h=+0.000001  8h=+0.000012       -
+[2026-03-27 15:07:01] ETH   1h=-0.000001  8h=-0.000011       -
+[2026-03-27 15:07:01] SOL   1h=-0.000053  8h=-0.000422       -
+[2026-03-27 15:07:01] XRP   1h=+0.000008  8h=+0.000060       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-27 16:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-27 16:07:00] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-27 16:07:00] ETH   1h=-0.000007  8h=-0.000055       -
+[2026-03-27 16:07:00] SOL   1h=-0.000069  8h=-0.000553       -
+[2026-03-27 16:07:00] XRP   1h=-0.000012  8h=-0.000098       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-27 17:07:01] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-27 17:07:01] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-27 17:07:01] ETH   1h=+0.000006  8h=+0.000046       -
+[2026-03-27 17:07:01] SOL   1h=-0.000044  8h=-0.000349       -
+[2026-03-27 17:07:01] XRP   1h=-0.000007  8h=-0.000052       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-27 18:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-27 18:07:00] DOGE  1h=+0.000009  8h=+0.000072       -
+[2026-03-27 18:07:00] ETH   1h=+0.000008  8h=+0.000065       -
+[2026-03-27 18:07:00] SOL   1h=-0.000045  8h=-0.000364       -
+[2026-03-27 18:07:00] XRP   1h=-0.000023  8h=-0.000188       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-27 19:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-27 19:07:00] DOGE  1h=-0.000004  8h=-0.000028       -
+[2026-03-27 19:07:00] ETH   1h=-0.000003  8h=-0.000023       -
+[2026-03-27 19:07:00] SOL   1h=-0.000041  8h=-0.000330       -
+[2026-03-27 19:07:00] XRP   1h=-0.000029  8h=-0.000236       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-27 20:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-27 20:07:00] DOGE  1h=-0.000002  8h=-0.000019       -
+[2026-03-27 20:07:00] ETH   1h=-0.000010  8h=-0.000076       -
+[2026-03-27 20:07:00] SOL   1h=-0.000037  8h=-0.000294       -
+[2026-03-27 20:07:00] XRP   1h=-0.000020  8h=-0.000158       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-27 21:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-27 21:07:00] DOGE  1h=-0.000007  8h=-0.000057       -
+[2026-03-27 21:07:00] ETH   1h=-0.000007  8h=-0.000053       -
+[2026-03-27 21:07:00] SOL   1h=-0.000029  8h=-0.000235       -
+[2026-03-27 21:07:00] XRP   1h=-0.000021  8h=-0.000169       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-27 22:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-27 22:07:00] DOGE  1h=-0.000002  8h=-0.000017       -
+[2026-03-27 22:07:00] ETH   1h=-0.000007  8h=-0.000052       -
+[2026-03-27 22:07:00] SOL   1h=-0.000038  8h=-0.000302       -
+[2026-03-27 22:07:00] XRP   1h=-0.000022  8h=-0.000177       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-27 23:07:01] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-27 23:07:01] DOGE  1h=-0.000009  8h=-0.000068       -
+[2026-03-27 23:07:01] ETH   1h=-0.000011  8h=-0.000084       -
+[2026-03-27 23:07:01] SOL   1h=-0.000039  8h=-0.000313       -
+[2026-03-27 23:07:01] XRP   1h=-0.000031  8h=-0.000248       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-28 15:07:01] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-28 15:07:01] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-28 15:07:01] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-28 15:07:01] SOL   1h=-0.000012  8h=-0.000094       -
+[2026-03-28 15:07:01] XRP   1h=-0.000008  8h=-0.000064       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-28 16:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-28 16:07:00] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-28 16:07:00] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-28 16:07:00] SOL   1h=-0.000026  8h=-0.000208       -
+[2026-03-28 16:07:00] XRP   1h=+0.000001  8h=+0.000010       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-28 17:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-28 17:07:00] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-28 17:07:00] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-28 17:07:00] SOL   1h=-0.000023  8h=-0.000183       -
+[2026-03-28 17:07:00] XRP   1h=-0.000002  8h=-0.000014       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-28 18:07:01] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-28 18:07:01] DOGE  1h=+0.000013  8h=+0.000100       -
+[2026-03-28 18:07:01] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-28 18:07:01] SOL   1h=-0.000023  8h=-0.000182       -
+[2026-03-28 18:07:01] XRP   1h=-0.000012  8h=-0.000094       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-28 19:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-28 19:07:00] DOGE  1h=+0.000009  8h=+0.000072       -
+[2026-03-28 19:07:00] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-28 19:07:00] SOL   1h=-0.000024  8h=-0.000193       -
+[2026-03-28 19:07:00] XRP   1h=-0.000008  8h=-0.000062       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-28 20:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-28 20:07:00] DOGE  1h=+0.000009  8h=+0.000073       -
+[2026-03-28 20:07:00] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-28 20:07:00] SOL   1h=-0.000033  8h=-0.000263       -
+[2026-03-28 20:07:00] XRP   1h=-0.000020  8h=-0.000162       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-28 21:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-28 21:07:00] DOGE  1h=+0.000011  8h=+0.000084       -
+[2026-03-28 21:07:00] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-28 21:07:00] SOL   1h=-0.000047  8h=-0.000380       -
+[2026-03-28 21:07:00] XRP   1h=-0.000011  8h=-0.000086       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-28 22:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-28 22:07:00] DOGE  1h=+0.000006  8h=+0.000051       -
+[2026-03-28 22:07:00] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-28 22:07:00] SOL   1h=-0.000055  8h=-0.000441       -
+[2026-03-28 22:07:00] XRP   1h=-0.000019  8h=-0.000151       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-28 23:07:01] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-28 23:07:01] DOGE  1h=-0.000000  8h=-0.000001       -
+[2026-03-28 23:07:01] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-28 23:07:01] SOL   1h=-0.000058  8h=-0.000461       -
+[2026-03-28 23:07:01] XRP   1h=-0.000020  8h=-0.000163       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-29 00:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-29 00:07:00] DOGE  1h=-0.000002  8h=-0.000016       -
+[2026-03-29 00:07:00] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-29 00:07:00] SOL   1h=-0.000042  8h=-0.000336       -
+[2026-03-29 00:07:00] XRP   1h=-0.000019  8h=-0.000149       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-29 01:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-29 01:07:00] DOGE  1h=-0.000012  8h=-0.000097       -
+[2026-03-29 01:07:00] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-29 01:07:00] SOL   1h=-0.000032  8h=-0.000260       -
+[2026-03-29 01:07:00] XRP   1h=-0.000009  8h=-0.000071       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-29 02:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-29 02:07:00] DOGE  1h=-0.000002  8h=-0.000014       -
+[2026-03-29 02:07:00] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-29 02:07:00] SOL   1h=-0.000046  8h=-0.000367       -
+[2026-03-29 02:07:00] XRP   1h=-0.000009  8h=-0.000069       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-29 03:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-29 03:07:00] DOGE  1h=-0.000008  8h=-0.000062       -
+[2026-03-29 03:07:00] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-29 03:07:00] SOL   1h=-0.000033  8h=-0.000265       -
+[2026-03-29 03:07:00] XRP   1h=+0.000001  8h=+0.000007       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-29 04:07:01] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-29 04:07:01] DOGE  1h=-0.000000  8h=-0.000001       -
+[2026-03-29 04:07:01] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-29 04:07:01] SOL   1h=-0.000031  8h=-0.000250       -
+[2026-03-29 04:07:01] XRP   1h=-0.000027  8h=-0.000214       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-29 05:07:00] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-29 05:07:00] DOGE  1h=+0.000004  8h=+0.000033       -
+[2026-03-29 05:07:00] ETH   1h=+0.000011  8h=+0.000090       -
+[2026-03-29 05:07:00] SOL   1h=-0.000036  8h=-0.000289       -
+[2026-03-29 05:07:00] XRP   1h=-0.000028  8h=-0.000221       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
+/Users/lotusfamily/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+[2026-03-29 06:07:01] BTC   1h=+0.000013  8h=+0.000100       -
+[2026-03-29 06:07:01] DOGE  1h=+0.000007  8h=+0.000055       -
+[2026-03-29 06:07:01] ETH   1h=+0.000013  8h=+0.000100       -
+[2026-03-29 06:07:01] SOL   1h=-0.000037  8h=-0.000295       -
+[2026-03-29 06:07:01] XRP   1h=-0.000031  8h=-0.000248       -
+→ Appended 5 rows to /Users/lotusfamily/MindRaid/data/funding_log.csv
