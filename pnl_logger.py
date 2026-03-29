@@ -68,6 +68,33 @@ def read_open_positions() -> list[dict]:
         return [r for r in csv.DictReader(f) if r["status"] == "open"]
 
 
+# ── 前回ログ情報の取得 ────────────────────────────────────────
+
+def get_last_log_for_position(position_id: str) -> tuple:
+    """
+    (last_logged_at_utc_str, cumulative_funding_usd) を返す。
+    CSV にログがなければ (None, 0.0)。
+
+    - last_logged_at_utc_str: 前回ログのタイムスタンプ（次回のsince_msに使う）
+    - cumulative_funding_usd: これまでの累計実績FR収益
+    """
+    if not os.path.exists(PNL_PATH):
+        return None, 0.0
+
+    last_time = None
+    cumulative = 0.0
+    with open(PNL_PATH, newline="") as f:
+        for row in csv.DictReader(f):
+            if row.get("position_id") == position_id:
+                last_time = row.get("logged_at_utc")
+                try:
+                    cumulative += float(row.get("total_funding_actual_usd", 0))
+                except ValueError:
+                    pass
+
+    return last_time, cumulative
+
+
 # ── HL 実際のFR取得 ───────────────────────────────────────────
 
 def fetch_hl_funding_since(info: Info, wallet: str, since_ms: int) -> list[dict]:
@@ -95,12 +122,11 @@ def fetch_hl_funding_since(info: Info, wallet: str, since_ms: int) -> list[dict]
 
 # ── 理論値計算 ────────────────────────────────────────────────
 
-def calc_theoretical(coin: str, size: float, hours: float) -> float:
+def calc_theoretical(coin: str, size: float, hours: float, entry_price: float) -> float:
     """
-    funding_log.csv の直近レートからFR収益理論値を計算。
-    size: ETH枚数, hours: 保有時間数
+    funding_log.csv の直近レートからFR収益理論値をUSD換算で計算。
     """
-    if not os.path.exists(FUND_PATH):
+    if not os.path.exists(FUND_PATH) or entry_price == 0:
         return 0.0
 
     rows = []
@@ -112,26 +138,17 @@ def calc_theoretical(coin: str, size: float, hours: float) -> float:
     if not rows:
         return 0.0
 
-    # 直近 N レコードの平均レート (1h)
-    lookback = min(len(rows), int(hours) + 1)
+    lookback = min(len(rows), max(int(hours), 1))
     recent = rows[-lookback:]
     avg_rate_1h = sum(float(r["funding_rate_1h"]) for r in recent) / len(recent)
 
-    # 理論収益 = avg_rate_1h × hours × notional
-    # notional の価格: funding_log には価格がないので size のみで%計算 → USDはエントリ価格が必要
-    # ここでは rate × hours × size を返す（呼び出し元でエントリ価格を掛ける）
-    return avg_rate_1h * hours * size  # unit: ETH×rate (dimensionless)
+    # 理論収益 USD = avg_rate_1h × hours × size × entry_price
+    return avg_rate_1h * hours * size * entry_price
 
 
 # ── スリッページ計算 ──────────────────────────────────────────
 
 def calc_slippage(pos: dict) -> float:
-    """
-    理想価格 = (short_entry + long_entry) / 2
-    実スリッページ = |short_entry - long_entry| × size / 2
-    デルタニュートラルなら両側のスリッページが打ち消し合うためゼロに近い。
-    参考値として記録する。
-    """
     try:
         s = float(pos["short_entry_price"])
         l = float(pos["long_entry_price"])
@@ -174,10 +191,6 @@ def main() -> None:
 
     print(f"[{now_str}] オープンポジション {len(open_positions)}件 を処理中...")
 
-    # HL の直近 24h 資金調達履歴をまとめて取得
-    since_24h_ms = now_ms - 24 * 3600 * 1000
-    hl_history   = fetch_hl_funding_since(info, wallet, since_24h_ms)
-
     for pos in open_positions:
         pid   = pos["position_id"]
         coin  = pos["coin"]
@@ -187,29 +200,47 @@ def main() -> None:
         opened = datetime.strptime(pos["opened_at_utc"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
         hours_total = (now - opened).total_seconds() / 3600
 
-        # HL 実際のFR収益 (直近24h 分)
+        # 前回ログ情報を取得
+        last_logged_str, prev_cumulative = get_last_log_for_position(pid)
+
+        # 前回ログ時刻以降のFRを取得（初回はポジション開設時刻から）
+        if last_logged_str:
+            last_logged_dt = datetime.strptime(last_logged_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+            since_ms = int(last_logged_dt.timestamp() * 1000)
+            period_hours = (now - last_logged_dt).total_seconds() / 3600
+        else:
+            since_ms = int(opened.timestamp() * 1000)
+            period_hours = hours_total
+
+        # HL 実際のFR収益（今回期間分のみ）
+        hl_history = fetch_hl_funding_since(info, wallet, since_ms)
         hl_funding_usd = sum(
             item["usdc"] for item in hl_history
             if item["coin"] == coin
         )
 
-        # MEXC は現時点では手動入力のため 0 (将来 ccxt で自動化)
+        # MEXC は現時点では手動入力のため 0
         mexc_funding_usd = 0.0
 
-        total_actual = hl_funding_usd + mexc_funding_usd
+        # 今期間の実績合計
+        period_actual = hl_funding_usd + mexc_funding_usd
 
-        # 理論値 (エントリー価格を使って USD 換算)
+        # 累計実績 FR（過去ログ + 今期間）
+        cumulative_funding = prev_cumulative + period_actual
+
+        # エントリー価格
         try:
             entry_price = (float(pos["short_entry_price"]) + float(pos["long_entry_price"])) / 2
         except (ValueError, KeyError):
             entry_price = 0.0
-        theoretical_rate_eth = calc_theoretical(coin, size, min(hours_total, 24))
-        theoretical_usd = theoretical_rate_eth * entry_price  # 直近24h理論値
 
-        # 精度 (%)
-        accuracy = (total_actual / theoretical_usd * 100) if theoretical_usd != 0 else None
+        # 今期間の理論値
+        theoretical_usd = calc_theoretical(coin, size, period_hours, entry_price)
 
-        # 手数料
+        # 精度
+        accuracy = (period_actual / theoretical_usd * 100) if theoretical_usd != 0 else None
+
+        # 手数料（入場時の1回限り）
         try:
             entry_fees = float(pos["short_entry_fee_usd"]) + float(pos["long_entry_fee_usd"])
         except (ValueError, KeyError):
@@ -218,14 +249,14 @@ def main() -> None:
         # スリッページ
         slippage = calc_slippage(pos)
 
-        # Net PnL (直近24h FR - 手数料)
-        net_pnl = total_actual - entry_fees
+        # Net PnL = 累計FR収益 - 入場手数料（1回限り）
+        net_pnl = cumulative_funding - entry_fees
 
-        # 年率 APY
+        # 年率 APY（今期間のFRから計算）
         notional = size * entry_price if entry_price else 0.0
-        if notional > 0 and hours_total > 0:
-            daily_rate = total_actual / notional / (min(hours_total, 24) / 24)
-            annualized_apy = daily_rate * 365 * 100
+        if notional > 0 and period_hours > 0:
+            hourly_rate = period_actual / notional / period_hours
+            annualized_apy = hourly_rate * 24 * 365 * 100
         else:
             annualized_apy = 0.0
 
@@ -234,10 +265,10 @@ def main() -> None:
             "position_id":                  pid,
             "coin":                         coin,
             "size":                         size,
-            "period_hours":                 round(min(hours_total, 24), 2),
+            "period_hours":                 round(period_hours, 2),
             "hl_funding_actual_usd":        round(hl_funding_usd, 6),
             "mexc_funding_actual_usd":      round(mexc_funding_usd, 6),
-            "total_funding_actual_usd":     round(total_actual, 6),
+            "total_funding_actual_usd":     round(period_actual, 6),
             "total_funding_theoretical_usd": round(theoretical_usd, 6),
             "accuracy_pct":                 round(accuracy, 2) if accuracy is not None else "",
             "entry_fees_usd":               round(entry_fees, 4),
@@ -251,8 +282,9 @@ def main() -> None:
 
         acc_str = f"{accuracy:.1f}%" if accuracy is not None else "N/A"
         print(f"  [{pid}] {coin} {size} ETH | "
-              f"実FR: ${total_actual:+.4f} | 理論: ${theoretical_usd:+.4f} | "
-              f"精度: {acc_str} | APY: {annualized_apy:.2f}%")
+              f"期間FR: ${period_actual:+.4f} | 累計FR: ${cumulative_funding:+.4f} | "
+              f"理論: ${theoretical_usd:+.4f} | 精度: {acc_str} | "
+              f"Net PnL: ${net_pnl:+.4f} | APY: {annualized_apy:.2f}%")
 
     print(f"→ {len(open_positions)}件 追記完了: {PNL_PATH}")
 
