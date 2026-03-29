@@ -28,34 +28,58 @@ def load_env():
     return env
 
 
-def read_latest_pnl():
+def read_pnl_summary():
+    """
+    直近24時間分のFundingを合計し、最新行のNet PnL・APYと合わせて返す。
+    戻り値: dict or None
+    """
     if not os.path.exists(PNL_PATH):
         return None
     rows = []
     with open(PNL_PATH, newline="") as f:
         rows = list(csv.DictReader(f))
-    return rows[-1] if rows else None
+    if not rows:
+        return None
+
+    now = datetime.now(timezone.utc)
+    cutoff = now.timestamp() - 24 * 3600
+
+    # 直近24h のFundingを合計
+    funding_24h = 0.0
+    theory_24h  = 0.0
+    for r in rows:
+        try:
+            ts = datetime.strptime(r["logged_at_utc"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc).timestamp()
+            if ts >= cutoff:
+                funding_24h += float(r.get("hl_funding_actual_usd", 0))
+                theory_24h  += float(r.get("total_funding_theoretical_usd", 0) or 0)
+        except Exception:
+            pass
+
+    latest = rows[-1]
+    return {
+        "coin":        latest.get("coin", "ETH"),
+        "size":        latest.get("size", "?"),
+        "funding_24h": funding_24h,
+        "theory_24h":  theory_24h,
+        "apy":         float(latest.get("annualized_apy_pct", 0) or 0),
+        "net_pnl":     float(latest.get("net_pnl_usd", 0)),
+        "fees":        float(latest.get("entry_fees_usd", 0)),
+    }
 
 
-def calc_days_open(row: dict) -> int:
-    try:
-        opened = datetime.strptime(row["logged_at_utc"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
-        return max(1, int((datetime.now(timezone.utc) - opened).total_seconds() / 86400))
-    except Exception:
-        return 1
+def build_tweet(summary: dict, today_str: str) -> str:
+    coin        = summary["coin"]
+    size        = summary["size"]
+    actual      = summary["funding_24h"]
+    theory      = summary["theory_24h"]
+    apy         = summary["apy"]
+    net_pnl     = summary["net_pnl"]
+    fees        = summary["fees"]
 
+    accuracy    = (actual / theory * 100) if theory != 0 else None
 
-def build_tweet(row: dict, today_str: str) -> str:
-    coin     = row.get("coin", "ETH")
-    size     = row.get("size", "?")
-    actual   = float(row.get("hl_funding_actual_usd", 0))
-    theory   = float(row.get("total_funding_theoretical_usd", 0) or 0)
-    accuracy = row.get("accuracy_pct", "")
-    apy      = float(row.get("annualized_apy_pct", 0) or 0)
-    net_pnl  = float(row.get("net_pnl_usd", 0))
-    fees     = float(row.get("entry_fees_usd", 0))
-
-    acc_str = f"{float(accuracy):.1f}%" if accuracy else "N/A"
+    acc_str = f"{accuracy:.1f}%" if accuracy is not None else "N/A"
     sign    = "+" if actual >= 0 else ""
 
     lines = [
@@ -88,12 +112,12 @@ def post_tweet(tweet_text: str):
 def main():
     today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-    row = read_latest_pnl()
-    if not row:
+    summary = read_pnl_summary()
+    if not summary:
         print("❌ pnl_log.csv にデータがありません")
         return
 
-    tweet_text = build_tweet(row, today_str)
+    tweet_text = build_tweet(summary, today_str)
     print("--- Tweet preview ---")
     print(tweet_text)
     print("---------------------")
