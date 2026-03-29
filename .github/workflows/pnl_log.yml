@@ -1,0 +1,37 @@
+name: PnL Logger
+
+on:
+  schedule:
+    - cron: '10 * * * *'  # 毎時 10 分（UTC）に実行
+  workflow_dispatch:        # GitHub UI から手動実行も可
+
+jobs:
+  log-pnl:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run PnL logger
+        env:
+          HL_WALLET_ADDRESS: ${{ secrets.HL_WALLET_ADDRESS }}
+        run: python pnl_logger.py
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/pnl_log.csv
+          git diff --staged --quiet || git commit -m "log: pnl $(date -u '+%Y-%m-%d %H:%M UTC')"
+          git push
