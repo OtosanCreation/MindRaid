@@ -2,7 +2,7 @@ name: PnL Daily X Post
 
 on:
   schedule:
-    - cron: '0 23 * * *'  # 毎日 23:00 UTC = JST 8:00（フォロワーアクティブ時間）
+    - cron: '30 22 * * *'  # 毎日 22:30 UTC = JST 7:30（遅延30分想定で8:00着狙い）
   workflow_dispatch:        # GitHub UI から手動実行も可
 
 jobs:
