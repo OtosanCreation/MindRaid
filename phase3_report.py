@@ -14,7 +14,7 @@ import json
 import os
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 DATA_DIR  = os.path.join(os.path.dirname(__file__), "data")
 POS_PATH  = os.path.join(DATA_DIR, "positions.csv")
@@ -138,6 +138,37 @@ def build_report(positions: list[dict], pnl_logs: list[dict]) -> str:
         lines.append(f"    理論 vs 実績:     {total_acc_str}")
         lines.append(f"    手数料:           -${total_fees:.4f}")
         lines.append(f"    Net PnL:          ${total_net_pnl:+.4f}")
+
+    # ── 8時間ウィンドウ別 実績 vs 理論
+    if pnl_logs:
+        lines.append(f"\n  8時間ウィンドウ別 実績 vs 理論（精度検証）")
+        lines.append("  " + "-" * 62)
+        lines.append(f"  {'ウィンドウ (UTC)':<22} {'実績FR':>10} {'理論FR':>10} {'精度':>8} {'件数':>5}")
+        lines.append("  " + "-" * 62)
+
+        # 8h区切りのエポック境界に丸める
+        def to_8h_bucket(ts_str: str) -> datetime:
+            dt = datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+            bucket_h = (dt.hour // 8) * 8
+            return dt.replace(hour=bucket_h, minute=0, second=0, microsecond=0)
+
+        buckets: dict[datetime, list[dict]] = {}
+        for row in pnl_logs:
+            b = to_8h_bucket(row["logged_at_utc"])
+            buckets.setdefault(b, []).append(row)
+
+        for bucket_dt in sorted(buckets):
+            brows = buckets[bucket_dt]
+            b_actual = sum(float(r["total_funding_actual_usd"]) for r in brows)
+            b_theo   = sum(float(r["total_funding_theoretical_usd"]) for r in brows
+                          if r["total_funding_theoretical_usd"])
+            b_acc    = f"{b_actual/b_theo*100:.1f}%" if b_theo != 0 else "N/A"
+            label    = bucket_dt.strftime("%m/%d %H:00") + "~" + (bucket_dt + timedelta(hours=8)).strftime("%H:00")
+            lines.append(f"  {label:<22} {b_actual:>+10.5f} {b_theo:>+10.5f} {b_acc:>8} {len(brows):>5}件")
+
+        lines.append("  " + "-" * 62)
+        lines.append("  ※ 精度100%超 = 実際のレートが予測より高かった")
+        lines.append("  ※ 精度マイナス = 実績と理論の符号が逆（レート反転）")
 
     lines.append("\n" + "=" * 62)
     lines.append("  ※ 投資助言ではありません / 実験・検証目的")

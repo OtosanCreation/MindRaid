@@ -138,7 +138,8 @@ def calc_theoretical(coin: str, size: float, hours: float, entry_price: float) -
     if not rows:
         return 0.0
 
-    lookback = min(len(rows), max(int(hours), 1))
+    # 直近24件固定で平均レートを算出（period_hoursで切ると短期間時に1件しか使わず暴れるため）
+    lookback = min(len(rows), 24)
     recent = rows[-lookback:]
     avg_rate_1h = sum(float(r["funding_rate_1h"]) for r in recent) / len(recent)
 
