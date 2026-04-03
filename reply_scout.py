@@ -83,7 +83,8 @@ def search_tweets(client: tweepy.Client, keyword: str, sent_ids: dict) -> list[d
     try:
         resp = client.search_recent_tweets(
             query=query,
-            max_results=20,
+            max_results=10,  # 最小値は10（API制限）、実質5件相当を上位で取得
+            sort_order="relevancy",
             tweet_fields=["public_metrics", "created_at", "author_id"],
             expansions=["author_id"],
             user_fields=["username", "name"],
