@@ -20,7 +20,7 @@ from email.mime.text import MIMEText
 import tweepy
 
 # ── 設定 ──────────────────────────────────────────────────────
-KEYWORDS = ["Hyperliquid", "FundingRate", "仮想通貨 アービトラージ"]
+KEYWORDS = ["Hyperliquid", "ファンディングレート"]
 EXCLUDE_WORDS = ["簡単に稼げる", "誰でも", "保証"]
 TOP_PER_KEYWORD = 2
 SENT_IDS_PATH = os.path.join(os.path.dirname(__file__), "data", "sent_ids.json")
@@ -107,6 +107,8 @@ def search_tweets(client: tweepy.Client, keyword: str, sent_ids: dict) -> list[d
         # impression_countは自分のツイート以外0になることがあるため複合スコアで補完
         impression = m.get("impression_count", 0)
         score = impression if impression > 0 else (m.get("like_count", 0) * 10 + m.get("retweet_count", 0) * 5)
+        if impression > 0 and impression < 1000:
+            continue  # 閲覧数1000未満は除外
         username, name = users.get(tweet.author_id, ("unknown", ""))
         results.append({
             "id": str(tweet.id),
