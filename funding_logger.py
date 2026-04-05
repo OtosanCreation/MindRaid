@@ -19,7 +19,6 @@ from datetime import datetime, timezone
 
 from hyperliquid.info import Info
 
-COINS       = ["BTC", "ETH", "SOL", "DOGE", "XRP"]
 MEXC_COINS  = ["ETH", "BTC", "SOL"]   # MEXCで取得する銘柄
 MEXC_SYMBOLS = {"ETH": "ETH_USDT", "BTC": "BTC_USDT", "SOL": "SOL_USDT"}
 VENUE       = "HlPerp"
@@ -44,8 +43,6 @@ def fetch_funding(info: Info) -> list[dict]:
     result = []
     for item in raw:
         coin, venues = item[0], item[1]
-        if coin not in COINS:
-            continue
         for venue_name, data in venues:
             if venue_name != VENUE:
                 continue
