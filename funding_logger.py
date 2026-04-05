@@ -1,14 +1,13 @@
 """
 funding_logger.py
-BTC / ETH / SOL の predictedFunding (HlPerp) を取得して CSV に追記する。
-crontab から毎時呼び出す想定。
+HL全銘柄（229）と MEXC共通銘柄（約191）の predictedFunding を毎時取得してCSVに追記。
 
-CSV: /Users/lotusfamily/MindRaid/data/funding_log.csv
-列 : timestamp_utc, coin, funding_rate_1h, funding_rate_8h, funding_rate_24h,
-     interval_hours, taker_ok, maker_ok
+HL CSV:   data/funding_log.csv
+  列: timestamp_utc, coin, funding_rate_1h, funding_rate_8h, funding_rate_24h,
+      interval_hours, taker_ok, maker_ok
 
-MEXC CSV: /Users/lotusfamily/MindRaid/data/mexc_funding_log.csv
-列 : timestamp_utc, coin, funding_rate_1h, next_settle_time
+MEXC CSV: data/mexc_funding_log.csv
+  列: timestamp_utc, coin, funding_rate_1h, next_settle_time
 """
 
 import csv
@@ -19,15 +18,13 @@ from datetime import datetime, timezone
 
 from hyperliquid.info import Info
 
-MEXC_COINS  = ["ETH", "BTC", "SOL"]   # MEXCで取得する銘柄
-MEXC_SYMBOLS = {"ETH": "ETH_USDT", "BTC": "BTC_USDT", "SOL": "SOL_USDT"}
-VENUE       = "HlPerp"
-TAKER_RT    = 0.00035 * 2   # 往復 taker 0.07%
-MAKER_RT    = 0.00010 * 2   # 往復 maker 0.02%
-DATA_DIR    = os.path.join(os.path.dirname(__file__), "data")
-CSV_PATH    = os.path.join(DATA_DIR, "funding_log.csv")
+VENUE     = "HlPerp"
+TAKER_RT  = 0.00035 * 2   # 往復 taker 0.07%
+MAKER_RT  = 0.00010 * 2   # 往復 maker 0.02%
+DATA_DIR  = os.path.join(os.path.dirname(__file__), "data")
+CSV_PATH      = os.path.join(DATA_DIR, "funding_log.csv")
 MEXC_CSV_PATH = os.path.join(DATA_DIR, "mexc_funding_log.csv")
-FIELDNAMES  = [
+FIELDNAMES = [
     "timestamp_utc", "coin",
     "funding_rate_1h", "funding_rate_8h", "funding_rate_24h",
     "interval_hours", "taker_ok", "maker_ok",
@@ -38,7 +35,7 @@ MEXC_FIELDNAMES = [
 ]
 
 
-def fetch_funding(info: Info) -> list[dict]:
+def fetch_hl_funding(info: Info) -> list[dict]:
     raw = info.post("/info", {"type": "predictedFundings"})
     result = []
     for item in raw:
@@ -49,18 +46,53 @@ def fetch_funding(info: Info) -> list[dict]:
             rate     = float(data["fundingRate"])
             interval = int(data["fundingIntervalHours"])
             rate_1h  = rate / interval
-            rate_8h  = rate_1h * 8
-            rate_24h = rate_1h * 24
             result.append({
-                "coin":             coin,
-                "funding_rate_1h":  rate_1h,
-                "funding_rate_8h":  rate_8h,
-                "funding_rate_24h": rate_24h,
-                "interval_hours":   interval,
-                "taker_ok":         abs(rate_1h) > TAKER_RT,
-                "maker_ok":         abs(rate_1h) > MAKER_RT,
+                "coin":            coin,
+                "funding_rate_1h": rate_1h,
+                "funding_rate_8h": rate_1h * 8,
+                "funding_rate_24h": rate_1h * 24,
+                "interval_hours":  interval,
+                "taker_ok":        abs(rate_1h) > TAKER_RT,
+                "maker_ok":        abs(rate_1h) > MAKER_RT,
             })
     return result
+
+
+def fetch_mexc_coins():
+    """MEXCで取扱中の_USDT無期限銘柄セットを返す"""
+    url = "https://contract.mexc.com/api/v1/contract/detail"
+    with urllib.request.urlopen(url, timeout=15) as r:
+        data = json.loads(r.read())
+    return {d["symbol"].replace("_USDT", "") for d in data["data"] if d["symbol"].endswith("_USDT")}
+
+
+def fetch_one_mexc(coin: str):
+    url = f"https://contract.mexc.com/api/v1/contract/funding_rate/{coin}_USDT"
+    try:
+        with urllib.request.urlopen(url, timeout=10) as r:
+            data = json.loads(r.read())
+        if not data.get("success"):
+            return None
+        d = data["data"]
+        rate_8h = float(d["fundingRate"])
+        return {
+            "coin":            coin,
+            "funding_rate_1h": rate_8h / 8,
+            "next_settle_time": d.get("nextSettleTime", ""),
+        }
+    except Exception as e:
+        print(f"[MEXC] {coin} 取得失敗: {e}")
+        return None
+
+
+def fetch_mexc_funding(target_coins):
+    """HL×MEXC共通銘柄を順次取得"""
+    results = []
+    for coin in target_coins:
+        r = fetch_one_mexc(coin)
+        if r:
+            results.append(r)
+    return results
 
 
 def append_csv(rows: list[dict], ts: str) -> None:
@@ -72,31 +104,6 @@ def append_csv(rows: list[dict], ts: str) -> None:
             writer.writeheader()
         for row in rows:
             writer.writerow({"timestamp_utc": ts, **row})
-
-
-def fetch_mexc_funding() -> list[dict]:
-    result = []
-    for coin in MEXC_COINS:
-        symbol = MEXC_SYMBOLS[coin]
-        url = f"https://contract.mexc.com/api/v1/contract/funding_rate/{symbol}"
-        try:
-            with urllib.request.urlopen(url, timeout=10) as resp:
-                data = json.loads(resp.read())
-            if not data.get("success"):
-                continue
-            d = data["data"]
-            # MEXCのfundingRateは8h換算なので1hに変換
-            rate_8h = float(d["fundingRate"])
-            rate_1h = rate_8h / 8
-            next_settle = d.get("nextSettleTime", "")
-            result.append({
-                "coin":             coin,
-                "funding_rate_1h":  rate_1h,
-                "next_settle_time": next_settle,
-            })
-        except Exception as e:
-            print(f"[MEXC] {coin} 取得失敗: {e}")
-    return result
 
 
 def append_mexc_csv(rows: list[dict], ts: str) -> None:
@@ -114,32 +121,38 @@ def main() -> None:
     ts   = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     info = Info(skip_ws=True)
 
-    # HL
-    rows = fetch_funding(info)
-    append_csv(rows, ts)
-    print("--- Hyperliquid ---")
-    for r in rows:
-        flag = "◀ TAKER" if r["taker_ok"] else ("◁ maker" if r["maker_ok"] else "     -")
-        print(f"[{ts}] {r['coin']:<4}  1h={r['funding_rate_1h']:+.6f}  "
-              f"8h={r['funding_rate_8h']:+.6f}  {flag}")
-    print(f"→ Appended {len(rows)} rows to {CSV_PATH}")
+    # ── HL 全銘柄 ──────────────────────────────────────
+    hl_rows = fetch_hl_funding(info)
+    append_csv(hl_rows, ts)
+    hl_coins = {r["coin"] for r in hl_rows}
+    taker_hits = [r for r in hl_rows if r["taker_ok"]]
+    maker_hits  = [r for r in hl_rows if r["maker_ok"]]
+    print(f"--- HL ({len(hl_rows)}銘柄) ---")
+    print(f"  taker超え: {len(taker_hits)}銘柄  maker超え: {len(maker_hits)}銘柄")
+    print(f"  → {CSV_PATH} に追記")
 
-    # MEXC
+    # ── MEXC HL共通銘柄 ────────────────────────────────
     print("--- MEXC ---")
-    mexc_rows = fetch_mexc_funding()
+    mexc_all = fetch_mexc_coins()
+    common   = sorted(hl_coins & mexc_all)
+    print(f"  HL×MEXC共通: {len(common)}銘柄 → 取得中...")
+    mexc_rows = fetch_mexc_funding(common)
     if mexc_rows:
         append_mexc_csv(mexc_rows, ts)
+        print(f"  取得成功: {len(mexc_rows)}銘柄")
+        # スプレッド上位5件表示
+        hl_map = {r["coin"]: r["funding_rate_1h"] for r in hl_rows}
+        spreads = []
         for r in mexc_rows:
-            # HL ETHと比較表示
-            hl_eth = next((x for x in rows if x["coin"] == r["coin"]), None)
-            diff = ""
-            if hl_eth:
-                spread = r["funding_rate_1h"] - hl_eth["funding_rate_1h"]
-                diff = f"  spread={spread:+.6f}"
-            print(f"[{ts}] {r['coin']:<4}  1h={r['funding_rate_1h']:+.6f}{diff}")
-        print(f"→ Appended {len(mexc_rows)} rows to {MEXC_CSV_PATH}")
+            hl_r = hl_map.get(r["coin"], 0)
+            spreads.append((r["coin"], r["funding_rate_1h"], hl_r, r["funding_rate_1h"] - hl_r))
+        spreads.sort(key=lambda x: abs(x[3]), reverse=True)
+        print("  スプレッド上位5:")
+        for coin, mx, hl, sp in spreads[:5]:
+            print(f"    {coin:<10} MEXC={mx:+.5f}  HL={hl:+.5f}  spread={sp:+.5f}")
+        print(f"  → {MEXC_CSV_PATH} に追記")
     else:
-        print("→ MEXC データ取得なし")
+        print("  → データ取得なし")
 
 
 if __name__ == "__main__":
