@@ -24,8 +24,8 @@ from hyperliquid.exchange import Exchange
 from hyperliquid.info import Info
 
 # ── 設定 ────────────────────────────────────────────────────────
-TRADE_SIZE_USD  = float(os.environ.get("TRADE_SIZE_USD", "50"))   # 1ポジションUSDT
-MAX_POSITIONS   = int(os.environ.get("MAX_POSITIONS", "3"))        # 最大同時ポジション数
+TRADE_SIZE_USD  = float(os.environ.get("TRADE_SIZE_USD", "90"))   # 1ポジションUSDT
+MAX_POSITIONS   = int(os.environ.get("MAX_POSITIONS", "2"))        # 最大同時ポジション数
 MIN_FR_1H       = 0.0012  # エントリー最小FR閾値: 0.12%/h（往復コスト0.17%÷損益分岐1.5h）
 
 DATA_DIR     = os.path.join(os.path.dirname(__file__), "data")
