@@ -1,0 +1,42 @@
+name: FR Post to X
+
+on:
+  workflow_dispatch:  # 手動実行のみ（自動投稿停止）
+
+jobs:
+  post-x:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system fonts (CJK)
+        run: sudo apt-get install -y fonts-noto-cjk
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate dashboard image
+        run: python generate_image.py
+
+      - name: Post to X (Twitter)
+        continue-on-error: true
+        env:
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+        run: python post_x.py
+
+      - name: Commit and push (sent_ids)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/sent_ids.json images/dashboard.png
+          git diff --staged --quiet || git commit -m "log: x post $(date -u '+%Y-%m-%d %H:%M UTC')"
+          git push
