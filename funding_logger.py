@@ -19,8 +19,8 @@ from datetime import datetime, timezone
 from hyperliquid.info import Info
 
 VENUE     = "HlPerp"
-TAKER_RT  = 0.00035 * 2   # 往復 taker 0.07%
-MAKER_RT  = 0.00010 * 2   # 往復 maker 0.02%
+TAKER_RT  = 0.00045 * 2   # 往復 taker 0.09%（HL実績: 0.045%/side）
+MAKER_RT  = 0.00015 * 2   # 往復 maker 0.03%（HL実績: 0.015%/side）
 DATA_DIR  = os.path.join(os.path.dirname(__file__), "data")
 CSV_PATH      = os.path.join(DATA_DIR, "funding_log.csv")
 MEXC_CSV_PATH = os.path.join(DATA_DIR, "mexc_funding_log.csv")

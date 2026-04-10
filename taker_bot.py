@@ -25,7 +25,7 @@ from hyperliquid.info import Info
 # ── 設定 ────────────────────────────────────────────────────────
 TRADE_SIZE_USD  = float(os.environ.get("TRADE_SIZE_USD", "50"))   # 1ポジションUSDT
 MAX_POSITIONS   = int(os.environ.get("MAX_POSITIONS", "3"))        # 最大同時ポジション数
-MIN_FR_1H       = 0.001   # エントリー最小FR閾値: 0.1%/h
+MIN_FR_1H       = 0.0012  # エントリー最小FR閾値: 0.12%/h（往復コスト0.17%÷損益分岐1.5h）
 
 DATA_DIR     = os.path.join(os.path.dirname(__file__), "data")
 FUNDING_CSV  = os.path.join(DATA_DIR, "funding_log.csv")
@@ -186,7 +186,7 @@ def main():
             now_dt = datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
             dur_h  = (now_dt - opened).total_seconds() / 3600
             est_fr = pos["fr_at_entry"] * dur_h * pos["size_usd"]
-            est_cost = 0.0015 * pos["size_usd"]   # 往復0.15%
+            est_cost = 0.0017 * pos["size_usd"]   # 往復0.17%（HL 0.09% + MEXC 0.08%）
             net = est_fr - est_cost
 
             del positions[coin]
