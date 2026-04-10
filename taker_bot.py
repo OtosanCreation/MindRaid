@@ -18,6 +18,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 
 import ccxt
+import tweepy
 from eth_account import Account
 from hyperliquid.exchange import Exchange
 from hyperliquid.info import Info
@@ -36,6 +37,10 @@ MEXC_API_KEY    = os.environ["MEXC_API_KEY"]
 MEXC_API_SECRET = os.environ["MEXC_API_SECRET"]
 TG_TOKEN        = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TG_CHAT         = os.environ.get("TELEGRAM_CHAT_ID", "")
+X_API_KEY       = os.environ.get("X_API_KEY", "")
+X_API_SECRET    = os.environ.get("X_API_SECRET", "")
+X_ACCESS_TOKEN  = os.environ.get("X_ACCESS_TOKEN", "")
+X_ACCESS_SECRET = os.environ.get("X_ACCESS_TOKEN_SECRET", "")
 
 
 # ── Telegram ─────────────────────────────────────────────────────
@@ -48,6 +53,23 @@ def tg(msg: str):
         urllib.request.urlopen(url, data=data, timeout=10)
     except Exception as e:
         print(f"[TG error] {e}")
+
+
+# ── X (Twitter) 投稿 ─────────────────────────────────────────────
+def post_x(text: str):
+    if not all([X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_SECRET]):
+        return
+    try:
+        client = tweepy.Client(
+            consumer_key=X_API_KEY,
+            consumer_secret=X_API_SECRET,
+            access_token=X_ACCESS_TOKEN,
+            access_token_secret=X_ACCESS_SECRET,
+        )
+        client.create_tweet(text=text)
+        print("[X] 投稿完了")
+    except Exception as e:
+        print(f"[X error] {e}")
 
 
 # ── State管理 ─────────────────────────────────────────────────────
@@ -198,6 +220,13 @@ def main():
                 f"推定FR収益: ${est_fr:.2f}\n"
                 f"手数料: ${est_cost:.2f}\n"
                 f"推定net: ${net:.2f}"
+            )
+            post_x(
+                f"🔴 FR Arb 決済 #{coin}\n"
+                f"保有時間: {dur_h:.1f}h\n"
+                f"推定収益: ${est_fr:.2f} / net: ${net:.2f}\n"
+                f"HL SHORT × MEXC LONG\n"
+                f"#MindRaid #FRArb #仮想通貨 #ClaudeCode"
             )
             print(f"  → 決済完了  推定net: ${net:.2f}")
 
