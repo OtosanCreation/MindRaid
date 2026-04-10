@@ -2,7 +2,7 @@ name: Funding Logger
 
 on:
   schedule:
-    - cron: '0 * * * *'   # 毎時 0 分（UTC）に実行
+    - cron: '*/30 * * * *'   # 30分毎（UTC）に実行
   workflow_dispatch:        # GitHub UI から手動実行も可
 
 jobs:
@@ -31,15 +31,6 @@ jobs:
 
       - name: Generate dashboard image
         run: python generate_image.py
-
-      - name: Post to X (Twitter)
-        continue-on-error: true
-        env:
-          X_API_KEY: ${{ secrets.X_API_KEY }}
-          X_API_SECRET: ${{ secrets.X_API_SECRET }}
-          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
-          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
-        run: python post_x.py
 
       - name: Send Telegram alert
         continue-on-error: true
