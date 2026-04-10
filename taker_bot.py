@@ -17,6 +17,10 @@ import urllib.parse
 from collections import defaultdict
 from datetime import datetime, timezone
 
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
 import ccxt
 import tweepy
 from eth_account import Account
@@ -41,6 +45,8 @@ X_API_KEY       = os.environ.get("X_API_KEY", "")
 X_API_SECRET    = os.environ.get("X_API_SECRET", "")
 X_ACCESS_TOKEN  = os.environ.get("X_ACCESS_TOKEN", "")
 X_ACCESS_SECRET = os.environ.get("X_ACCESS_TOKEN_SECRET", "")
+GMAIL_ADDRESS   = os.environ.get("GMAIL_ADDRESS", "")
+GMAIL_PASSWORD  = os.environ.get("GMAIL_APP_PASSWORD", "")
 
 
 # ── Telegram ─────────────────────────────────────────────────────
@@ -53,6 +59,24 @@ def tg(msg: str):
         urllib.request.urlopen(url, data=data, timeout=10)
     except Exception as e:
         print(f"[TG error] {e}")
+
+
+# ── Gmail通知 ────────────────────────────────────────────────────
+def send_gmail(subject: str, body: str):
+    if not GMAIL_ADDRESS or not GMAIL_PASSWORD:
+        return
+    try:
+        msg = MIMEMultipart()
+        msg["From"]    = GMAIL_ADDRESS
+        msg["To"]      = GMAIL_ADDRESS
+        msg["Subject"] = subject
+        msg.attach(MIMEText(body, "plain", "utf-8"))
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+            smtp.login(GMAIL_ADDRESS, GMAIL_PASSWORD)
+            smtp.send_message(msg)
+        print("[Gmail] 送信完了")
+    except Exception as e:
+        print(f"[Gmail error] {e}")
 
 
 # ── X (Twitter) 投稿 ─────────────────────────────────────────────
@@ -228,6 +252,18 @@ def main():
                 f"HL SHORT × MEXC LONG\n"
                 f"#MindRaid #FRArb #仮想通貨 #ClaudeCode"
             )
+            send_gmail(
+                subject=f"[MindRaid] EXIT: {coin}  net ${net:.2f}",
+                body=(
+                    f"FR Arb 決済\n\n"
+                    f"銘柄: {coin}\n"
+                    f"保有時間: {dur_h:.1f}h\n"
+                    f"推定FR収益: ${est_fr:.2f}\n"
+                    f"手数料: ${est_cost:.2f}\n"
+                    f"推定net: ${net:.2f}\n"
+                    f"時刻: {ts} UTC"
+                )
+            )
             print(f"  → 決済完了  推定net: ${net:.2f}")
 
     # ── エントリーチェック ──────────────────────────────────────
@@ -290,6 +326,18 @@ def main():
             f"Size: ${TRADE_SIZE_USD}\n"
             f"HL SHORT @ {hl_res['entry_price']:.6f}  ({hl_res['size_coin']} coins)\n"
             f"MEXC LONG @ {mx_res['entry_price']:.6f}  ({mx_res['contracts']} contracts)"
+        )
+        send_gmail(
+            subject=f"[MindRaid] ENTRY: {coin}",
+            body=(
+                f"FR Arb エントリー\n\n"
+                f"銘柄: {coin}\n"
+                f"FR: {avg_fr:.4%}/h\n"
+                f"サイズ: ${TRADE_SIZE_USD}\n"
+                f"HL SHORT @ {hl_res['entry_price']:.6f}\n"
+                f"MEXC LONG @ {mx_res['entry_price']:.6f}\n"
+                f"時刻: {ts} UTC"
+            )
         )
         print(f"  → エントリー完了")
 
