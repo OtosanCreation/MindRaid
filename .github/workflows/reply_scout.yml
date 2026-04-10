@@ -1,8 +1,6 @@
 name: Reply Scout
 
 on:
-  schedule:
-    - cron: '0 23 * * *'   # 毎日 23:00 UTC = JST 8:00
   workflow_dispatch:
 
 jobs:
