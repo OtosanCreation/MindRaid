@@ -53,8 +53,8 @@
 <div class="header">
   <h1>⚡ MindRaid</h1>
   <p>非エンジニアが Claude Code で作る アービトラージシステム</p>
-  <p style="color:#444;margin-top:6px;font-size:0.8em;">2026-04-05 更新</p>
-  <p style="color:#f5a623;margin-top:4px;font-size:0.75em;">Phase 3 進行中 — HL 229銘柄 × MEXC 175銘柄 スプレッドデータ蓄積中</p>
+  <p style="color:#444;margin-top:6px;font-size:0.8em;">2026-04-10 更新</p>
+  <p style="color:#f5a623;margin-top:4px;font-size:0.75em;">Phase 4 進行中 — taker_bot 稼働開始 / HL SHORT × MEXC LONG 自動売買</p>
 </div>
 
 <div class="timeline">
@@ -95,46 +95,52 @@
     </div>
   </div>
 
-  <div class="phase active">
-    <div class="phase-dot">▶</div>
+  <div class="phase done">
+    <div class="phase-dot">✓</div>
     <div class="phase-card">
       <div class="phase-header">
-        <span class="phase-tag tag-active">NOW</span>
+        <span class="phase-tag tag-done">DONE</span>
         <span class="phase-title">Phase 3 ── データ収集 &amp; 検証</span>
-        <span class="phase-meta">〜 4/12</span>
+        <span class="phase-meta">4/5〜4/10</span>
       </div>
       <ul class="tasks">
         <li class="done-task"><span class="icon">✓</span>Bitflyer → HL へ <strong style="color:#555">0.5 ETH</strong> 送金</li>
         <li class="done-task"><span class="icon">✓</span>ETH ショートポジション構築（POS-001）― HL単体テスト</li>
         <li class="done-task"><span class="icon">✓</span>損益・FR の自動ログ（GitHub Actions 毎時）</li>
         <li class="done-task"><span class="icon">✓</span>FR Arb 日次実績を X に自動投稿（JST 8:00）</li>
-        <li class="done-task"><span class="icon">✓</span>HL 全 229 銘柄 FR 収集に拡張（5銘柄固定を廃止）</li>
-        <li class="done-task"><span class="icon">✓</span>MEXC HL共通 175 銘柄 FR 収集に拡張（3銘柄固定を廃止）</li>
-        <li class="active-task"><span class="icon">▸</span>HL × MEXC スプレッドデータ蓄積中 ― 4/5〜4/12（1週間）</li>
+        <li class="done-task"><span class="icon">✓</span>HL 全 229 銘柄 FR 収集に拡張</li>
+        <li class="done-task"><span class="icon">✓</span>MEXC HL共通 191 銘柄 FR 収集に拡張</li>
+        <li class="done-task"><span class="icon">✓</span>HL × MEXC スプレッドデータ蓄積（〜4/10）</li>
+        <li class="done-task"><span class="icon">✓</span>データ分析完了 → taker戦略設計（2回連続確認・勝率94%）</li>
       </ul>
-      <div class="warn-box">⚠ 4/12 にスプレッド分析 → 高FR銘柄を選定して Phase 4 へ</div>
+      <div class="profit-box">
+        <div class="label">Phase 3 実績（ETH単体テスト）</div>
+        <div class="value">累積 +0.369 ETH 分の FR 収益確認</div>
+      </div>
     </div>
   </div>
 
-  <div class="phase pending">
-    <div class="phase-dot"></div>
+  <div class="phase active">
+    <div class="phase-dot">▶</div>
     <div class="phase-card">
       <div class="phase-header">
-        <span class="phase-tag tag-pending">NEXT</span>
-        <span class="phase-title">Phase 4 ── 銘柄選定 &amp; 両建て構築</span>
-        <span class="phase-meta">4/12〜</span>
+        <span class="phase-tag tag-active">NOW</span>
+        <span class="phase-title">Phase 4 ── 自動売買 稼働</span>
+        <span class="phase-meta">4/10〜</span>
       </div>
       <ul class="tasks">
-        <li class="todo"><span class="icon">▸</span>4/12 スプレッド分析 → 持続的に高FRな銘柄を特定</li>
-        <li class="todo"><span class="icon">▸</span>選定銘柄で HL ショート × MEXC ロング 両建て構築</li>
-        <li class="todo"><span class="icon">▸</span>手数料・スリッページ加味した純収益の実測</li>
-        <li class="todo"><span class="icon">▸</span>FR がマイナスに転じたら自動決済（exit_scanner.py）</li>
-        <li class="todo"><span class="icon">▸</span>収益確認後に規模拡大（ETH増額）</li>
+        <li class="done-task"><span class="icon">✓</span>データ分析 → taker銘柄17種特定・損益分岐算出</li>
+        <li class="done-task"><span class="icon">✓</span>taker_bot.py 実装（2回連続確認 → HL SHORT × MEXC LONG）</li>
+        <li class="done-task"><span class="icon">✓</span>スキャン間隔 1h → 30分 に変更</li>
+        <li class="done-task"><span class="icon">✓</span>ETHポジション解消 → MEXC に $200 入金</li>
+        <li class="active-task"><span class="icon">▸</span>taker_bot 本番稼働確認中（$50/ポジション × 最大3）</li>
+        <li class="todo"><span class="icon">▸</span>実収益の実測・ログ記録</li>
+        <li class="todo"><span class="icon">▸</span>問題なければ規模拡大（$50 → $200/ポジション）</li>
         <li class="todo"><span class="icon">▸</span>X フォロワー 500人 → 収益化申請</li>
       </ul>
       <div class="profit-box">
-        <div class="label">想定（高FRアルト @ スプレッド 0.05%/h × $1000）</div>
-        <div class="value">約 $12/日 ≈ 1,800円/日</div>
+        <div class="label">アルゴ性能（バックテスト）</div>
+        <div class="value">勝率 94% / 平均収益 +1.27%/トレード / 損益分岐 〜1.5h</div>
       </div>
     </div>
   </div>
@@ -167,15 +173,15 @@
   <div class="summary-grid">
     <div>
       <div class="s-label">フェーズ</div>
-      <div class="s-value">Phase 3 進行中</div>
+      <div class="s-value">Phase 4 稼働中</div>
     </div>
     <div>
-      <div class="s-label">保有資産</div>
-      <div class="s-value">28.88 ETH</div>
+      <div class="s-label">運用資金</div>
+      <div class="s-value">HL $813 + MEXC $200</div>
     </div>
     <div>
       <div class="s-label">次のアクション</div>
-      <div class="s-value" style="font-size:0.9em;">4/12 スプレッド分析</div>
+      <div class="s-value" style="font-size:0.9em;">bot動作確認 → 規模拡大</div>
     </div>
   </div>
 </div>
