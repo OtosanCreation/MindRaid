@@ -15,8 +15,9 @@ import json
 from datetime import datetime, timezone
 from hyperliquid.info import Info
 
-TAKER_RT = 0.00035 * 2   # 0.070%
-MAKER_RT = 0.00010 * 2   # 0.020%
+TAKER_RT  = 0.00035 * 2   # 0.070%
+MAKER_RT  = 0.00010 * 2   # 0.020%
+ENTRY_FR  = 0.0012         # エントリー閾値: 0.12%/h（taker_bot.pyと同値）
 
 
 def load_env():
@@ -75,23 +76,23 @@ def build_message(rows, now_str):
 
     lines = [
         f"<b>⚡ MindRaid Alert</b>  {now_str} UTC",
-        f"Hyperliquid {len(rows)}銘柄 | MAKER超え: {maker_total}銘柄",
+        f"Hyperliquid {len(rows)}銘柄 | MAKER超え: {maker_total}銘柄 | エントリー閾値: {ENTRY_FR*100:.2f}%/h",
         "",
     ]
 
     top_long = sorted_long[:3]
     if top_long:
-        lines.append("🟢 <b>LONG受取 TOP3</b>")
+        lines.append("🟢 <b>HL SHORT機会 TOP3</b>（FR ネガティブ）")
         for r in top_long:
-            tag = " ✅TAKER" if r["rate"] < -TAKER_RT else ""
+            tag = " ✅エントリー圏" if abs(r["rate"]) >= ENTRY_FR else ""
             lines.append(f"  {r['coin']}  <code>{pct(r['rate'])}</code>/h  (8h: {pct(r['rate']*8)}){tag}")
         lines.append("")
 
     top_short = sorted_short[:3]
     if top_short:
-        lines.append("🔴 <b>SHORT受取 TOP3</b>")
+        lines.append("🔴 <b>HL LONG機会 TOP3</b>（FR ポジティブ）")
         for r in top_short:
-            tag = " ✅TAKER" if r["rate"] > TAKER_RT else ""
+            tag = " ✅エントリー圏" if r["rate"] >= ENTRY_FR else ""
             lines.append(f"  {r['coin']}  <code>{pct(r['rate'])}</code>/h  (8h: {pct(r['rate']*8)}){tag}")
         lines.append("")
 
