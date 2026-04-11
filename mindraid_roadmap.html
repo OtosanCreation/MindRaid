@@ -53,8 +53,8 @@
 <div class="header">
   <h1>⚡ MindRaid</h1>
   <p>非エンジニアが Claude Code で作る アービトラージシステム</p>
-  <p style="color:#444;margin-top:6px;font-size:0.8em;">2026-04-10 更新</p>
-  <p style="color:#f5a623;margin-top:4px;font-size:0.75em;">Phase 4 進行中 — taker_bot 稼働開始 / HL SHORT × MEXC LONG 自動売買</p>
+  <p style="color:#444;margin-top:6px;font-size:0.8em;">2026-04-11 更新</p>
+  <p style="color:#f5a623;margin-top:4px;font-size:0.75em;">Phase 4 進行中 — taker_bot 稼働中 / 6日バックテスト 11戦全勝 +$18.20</p>
 </div>
 
 <div class="timeline">
@@ -129,18 +129,21 @@
         <span class="phase-meta">4/10〜</span>
       </div>
       <ul class="tasks">
-        <li class="done-task"><span class="icon">✓</span>データ分析 → taker銘柄17種特定・損益分岐算出</li>
+        <li class="done-task"><span class="icon">✓</span>データ分析 → 229銘柄全スキャン・損益分岐算出（MIN_FR=0.12%/h）</li>
         <li class="done-task"><span class="icon">✓</span>taker_bot.py 実装（2回連続確認 → HL SHORT × MEXC LONG）</li>
         <li class="done-task"><span class="icon">✓</span>スキャン間隔 1h → 30分 に変更</li>
         <li class="done-task"><span class="icon">✓</span>ETHポジション解消 → MEXC に $200 入金</li>
+        <li class="done-task"><span class="icon">✓</span>バックテスト検証完了（6日 9戦全勝 +$10.08 / $90運用）</li>
         <li class="active-task"><span class="icon">▸</span>taker_bot 本番稼働中（$90/ポジション × 最大2）</li>
-        <li class="todo"><span class="icon">▸</span>実収益の実測・ログ記録</li>
-        <li class="todo"><span class="icon">▸</span>問題なければ規模拡大（$50 → $200/ポジション）</li>
-        <li class="todo"><span class="icon">▸</span>X フォロワー 500人 → 収益化申請</li>
+        <li class="active-task"><span class="icon">▸</span>実収益の実測・データ蓄積中</li>
+        <li class="todo"><span class="icon">▸</span>exit_scanner.py 実装（1h毎FR監視 → 手数料込み決済判断）</li>
+        <li class="todo"><span class="icon">▸</span>2〜3週間後にサイジング見直し（$90 → $300/pos、流動性確認後）</li>
+        <li class="todo"><span class="icon">▸</span>MAX_POSITIONS 2 → 4 に拡張（銘柄分散でリスク低減）</li>
+        <li class="todo"><span class="icon">▸</span>X 発信継続（実トレード実績の公開）</li>
       </ul>
       <div class="profit-box">
-        <div class="label">アルゴ性能（バックテスト）</div>
-        <div class="value">勝率 94% / 平均収益 +1.27%/トレード / 損益分岐 〜1.5h</div>
+        <div class="label">アルゴ性能（6日実績バックテスト）</div>
+        <div class="value">11戦全勝 / 平均保有 6.1h / 推定+$18.20（$90×2運用）</div>
       </div>
     </div>
   </div>
@@ -150,19 +153,21 @@
     <div class="phase-card">
       <div class="phase-header">
         <span class="phase-tag tag-pending">FUTURE</span>
-        <span class="phase-title">Phase 5 ── フル自動化 &amp; 収益化</span>
-        <span class="phase-meta">〜 Month 3+</span>
+        <span class="phase-title">Phase 5 ── 複数収益柱の確立</span>
+        <span class="phase-meta">Month 2〜3+</span>
       </div>
       <ul class="tasks">
-        <li class="todo"><span class="icon">▸</span>29 ETH フル運用（条件が整った場合）</li>
-        <li class="todo"><span class="icon">▸</span>有料 Discord / note でシグナル販売</li>
-        <li class="todo"><span class="icon">▸</span>X 広告収益 + スポンサー</li>
-        <li class="todo"><span class="icon">▸</span>ダッシュボード SaaS 化</li>
+        <li class="todo"><span class="icon">▸</span>取引所間FRスプレッド裁定（HL × Bybit 両側受取）</li>
+        <li class="todo"><span class="icon">▸</span>運用規模 $300/pos × 4銘柄 → 月$200〜500 ターゲット</li>
+        <li class="todo"><span class="icon">▸</span>X フォロワー 500人 → 有料 Discord / note シグナル販売</li>
+        <li class="todo"><span class="icon">▸</span>コードOSS化 → GitHub Sponsors / 受託</li>
+        <li class="todo"><span class="icon">▸</span>X 広告収益（フォロワー数次第）</li>
       </ul>
       <div class="profit-box">
-        <div class="label">29 ETH フル運用の試算</div>
-        <div class="value">約 $100/日 ≈ 15,000円/日 ≈ 45万円/月</div>
+        <div class="label">現実的な収益試算（$300×4運用時）</div>
+        <div class="value">ボット: 月$200〜500 ／ シグナル販売: 月$100〜300（フォロワー次第）</div>
       </div>
+      <div class="warn-box">⚠ FR裁定は流動性の壁あり。サイズ拡大は銘柄ごとにスリッページ検証必須</div>
     </div>
   </div>
 
@@ -181,7 +186,7 @@
     </div>
     <div>
       <div class="s-label">次のアクション</div>
-      <div class="s-value" style="font-size:0.9em;">bot動作確認 → 規模拡大</div>
+      <div class="s-value" style="font-size:0.9em;">exit_scanner実装 → サイジング拡大</div>
     </div>
   </div>
 </div>
