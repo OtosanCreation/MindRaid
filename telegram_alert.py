@@ -62,34 +62,38 @@ def send_message(token, chat_id, text):
 
 
 def build_message(rows, now_str):
-    taker_long  = sorted([r for r in rows if r["rate"] < -TAKER_RT], key=lambda r: r["rate"])
-    taker_short = sorted([r for r in rows if r["rate"] >  TAKER_RT], key=lambda r: r["rate"], reverse=True)
+    sorted_long  = sorted([r for r in rows if r["rate"] < 0], key=lambda r: r["rate"])
+    sorted_short = sorted([r for r in rows if r["rate"] > 0], key=lambda r: r["rate"], reverse=True)
     maker_total = sum(1 for r in rows if abs(r["rate"]) > MAKER_RT)
 
     def pct(v):
         sign = "+" if v >= 0 else ""
         return f"{sign}{v*100:.4f}%"
 
+    def label(rate, threshold):
+        return "TAKER超え" if abs(rate) > threshold else "参考"
+
     lines = [
         f"<b>⚡ MindRaid Alert</b>  {now_str} UTC",
-        f"Hyperliquid 229銘柄 | MAKER超え: {maker_total}銘柄",
+        f"Hyperliquid {len(rows)}銘柄 | MAKER超え: {maker_total}銘柄",
         "",
     ]
 
-    if taker_long:
-        lines.append("🟢 <b>LONG受取 TAKER超え</b>")
-        for r in taker_long[:5]:
-            lines.append(f"  {r['coin']}  <code>{pct(r['rate'])}</code>/h  (8h: {pct(r['rate']*8)})")
+    top_long = sorted_long[:3]
+    if top_long:
+        lines.append("🟢 <b>LONG受取 TOP3</b>")
+        for r in top_long:
+            tag = " ✅TAKER" if r["rate"] < -TAKER_RT else ""
+            lines.append(f"  {r['coin']}  <code>{pct(r['rate'])}</code>/h  (8h: {pct(r['rate']*8)}){tag}")
         lines.append("")
 
-    if taker_short:
-        lines.append("🔴 <b>SHORT受取 TAKER超え</b>")
-        for r in taker_short[:5]:
-            lines.append(f"  {r['coin']}  <code>{pct(r['rate'])}</code>/h  (8h: {pct(r['rate']*8)})")
+    top_short = sorted_short[:3]
+    if top_short:
+        lines.append("🔴 <b>SHORT受取 TOP3</b>")
+        for r in top_short:
+            tag = " ✅TAKER" if r["rate"] > TAKER_RT else ""
+            lines.append(f"  {r['coin']}  <code>{pct(r['rate'])}</code>/h  (8h: {pct(r['rate']*8)}){tag}")
         lines.append("")
-
-    if not taker_long and not taker_short:
-        lines.append("現在 TAKER超えの銘柄はありません")
 
     lines.append("※投資助言ではありません")
     return "\n".join(lines)
