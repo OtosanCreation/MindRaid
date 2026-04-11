@@ -1,9 +1,9 @@
 """
 taker_bot.py
-FR自動売買ボット
-  - funding_log.csvの直近2回が taker_ok=True かつ FR > MIN_FR_1H → エントリー
-  - taker_ok=False になったら → 決済
-  - HL SHORT + MEXC LONG (delta neutral)
+FR自動売買ボット（双方向対応）
+  - FR < -MIN_FR_1H → HL SHORT + MEXC LONG  (ネガティブFR: LONGが受取)
+  - FR >  MIN_FR_1H → HL LONG  + MEXC SHORT (ポジティブFR: SHORTが受取)
+  - FR が EXIT閾値を下回ったら → 決済
 
 コスト: HL taker 0.035%×2 + MEXC taker 0.04%×2 = 往復0.15%
 """
@@ -156,6 +156,29 @@ def hl_close_short(exchange: Exchange, coin: str) -> dict:
     return {"close_price": filled_price}
 
 
+def hl_open_long(exchange: Exchange, info: Info, coin: str, size_usd: float) -> dict:
+    mids  = info.all_mids()
+    price = float(mids.get(coin, 0))
+    if price == 0:
+        raise ValueError(f"HL価格取得失敗: {coin}")
+    sz = round(size_usd / price, 6)
+    resp = exchange.market_open(coin, is_buy=True, sz=sz, slippage=0.02)
+    status = resp.get("response", {}).get("data", {}).get("statuses", [{}])[0]
+    if "error" in status:
+        raise RuntimeError(f"HL open error: {status['error']}")
+    filled_price = float(status.get("filled", {}).get("avgPx", price))
+    return {"size_coin": sz, "entry_price": filled_price}
+
+
+def hl_close_long(exchange: Exchange, coin: str) -> dict:
+    resp = exchange.market_close(coin, slippage=0.02)
+    status = resp.get("response", {}).get("data", {}).get("statuses", [{}])[0]
+    if "error" in status:
+        raise RuntimeError(f"HL close error: {status['error']}")
+    filled_price = float(status.get("filled", {}).get("avgPx", 0))
+    return {"close_price": filled_price}
+
+
 # ── MEXC ─────────────────────────────────────────────────────────
 def get_mexc() -> ccxt.mexc:
     return ccxt.mexc({
@@ -183,6 +206,27 @@ def mexc_open_long(mexc: ccxt.mexc, coin: str, size_usd: float) -> dict:
 def mexc_close_long(mexc: ccxt.mexc, coin: str, contracts: int) -> dict:
     symbol = f"{coin}/USDT:USDT"
     order  = mexc.create_market_sell_order(
+        symbol, contracts, params={"reduceOnly": True}
+    )
+    avg_price = float(order.get("average") or order.get("price") or 0)
+    return {"close_price": avg_price}
+
+
+def mexc_open_short(mexc: ccxt.mexc, coin: str, size_usd: float) -> dict:
+    symbol    = f"{coin}/USDT:USDT"
+    market    = mexc.market(symbol)
+    ticker    = mexc.fetch_ticker(symbol)
+    price     = float(ticker["bid"] or ticker["last"])
+    cs        = float(market.get("contractSize") or 1)
+    contracts = max(1, round(size_usd / (price * cs)))
+    order     = mexc.create_market_sell_order(symbol, contracts)
+    avg_price = float(order.get("average") or order.get("price") or price)
+    return {"contracts": contracts, "entry_price": avg_price, "contract_size": cs}
+
+
+def mexc_close_short(mexc: ccxt.mexc, coin: str, contracts: int) -> dict:
+    symbol = f"{coin}/USDT:USDT"
+    order  = mexc.create_market_buy_order(
         symbol, contracts, params={"reduceOnly": True}
     )
     avg_price = float(order.get("average") or order.get("price") or 0)
@@ -230,16 +274,25 @@ def main():
 
         print(f"[EXIT] {coin}  FR={current_fr*100:.4f}%/h < {exit_threshold*100:.4f}% → 決済")
 
+        direction = pos.get("direction", "short_fr")  # 旧stateとの後方互換
+        side_label = "HL SHORT × MEXC LONG" if direction == "short_fr" else "HL LONG × MEXC SHORT"
+
         hl_ok, mexc_ok = False, False
         try:
-            hl_close_short(exchange, coin)
+            if direction == "short_fr":
+                hl_close_short(exchange, coin)
+            else:
+                hl_close_long(exchange, coin)
             hl_ok = True
         except Exception as e:
             print(f"  HL close error: {e}")
             tg(f"⚠️ EXIT HL ERROR: {coin}\n{e}")
 
         try:
-            mexc_close_long(mexc, coin, int(pos["mexc_contracts"]))
+            if direction == "short_fr":
+                mexc_close_long(mexc, coin, int(pos["mexc_contracts"]))
+            else:
+                mexc_close_short(mexc, coin, int(pos["mexc_contracts"]))
             mexc_ok = True
         except Exception as e:
             print(f"  MEXC close error: {e}")
@@ -264,7 +317,7 @@ def main():
                 f"🔴 FR Arb 決済 #{coin}\n"
                 f"保有時間: {dur_h:.1f}h\n"
                 f"推定収益: ${est_fr:.2f} / net: ${net:.2f}\n"
-                f"HL SHORT × MEXC LONG\n"
+                f"{side_label}\n"
                 f"#MindRaid #FRArb #仮想通貨 #ClaudeCode"
             )
             send_gmail(
@@ -272,6 +325,7 @@ def main():
                 body=(
                     f"FR Arb 決済\n\n"
                     f"銘柄: {coin}\n"
+                    f"方向: {side_label}\n"
                     f"保有時間: {dur_h:.1f}h\n"
                     f"推定FR収益: ${est_fr:.2f}\n"
                     f"手数料: ${est_cost:.2f}\n"
@@ -294,15 +348,23 @@ def main():
         # 直近2回ともtaker_ok=True かつ FR閾値超え
         if not all(r["taker"] for r in rows):
             continue
-        avg_fr = sum(abs(r["fr"]) for r in rows) / len(rows)
+        avg_fr_raw = sum(r["fr"] for r in rows) / len(rows)
+        avg_fr     = abs(avg_fr_raw)
         if avg_fr < MIN_FR_1H:
             continue
 
-        print(f"[ENTRY] {coin}  avg_FR={avg_fr:.4%}/h  size=${TRADE_SIZE_USD}")
+        # FR方向で発注サイドを決定
+        direction  = "short_fr" if avg_fr_raw < 0 else "long_fr"
+        side_label = "HL SHORT × MEXC LONG" if direction == "short_fr" else "HL LONG × MEXC SHORT"
 
-        # HL SHORT
+        print(f"[ENTRY] {coin}  avg_FR={avg_fr_raw:.4%}/h  {side_label}  size=${TRADE_SIZE_USD}")
+
+        # HL発注
         try:
-            hl_res = hl_open_short(exchange, info, coin, TRADE_SIZE_USD)
+            if direction == "short_fr":
+                hl_res = hl_open_short(exchange, info, coin, TRADE_SIZE_USD)
+            else:
+                hl_res = hl_open_long(exchange, info, coin, TRADE_SIZE_USD)
         except Exception as e:
             print(f"  HL open error: {e}")
             tg(f"⚠️ ENTRY HL ERROR: {coin}\n{e}")
@@ -310,20 +372,27 @@ def main():
 
         time.sleep(1)
 
-        # MEXC LONG
+        # MEXC発注
         try:
-            mx_res = mexc_open_long(mexc, coin, TRADE_SIZE_USD)
+            if direction == "short_fr":
+                mx_res = mexc_open_long(mexc, coin, TRADE_SIZE_USD)
+            else:
+                mx_res = mexc_open_short(mexc, coin, TRADE_SIZE_USD)
         except Exception as e:
             print(f"  MEXC open error → HL rollback: {e}")
             tg(f"⚠️ ENTRY MEXC ERROR: {coin}\n{e}\nHL rollback中...")
             try:
-                hl_close_short(exchange, coin)
+                if direction == "short_fr":
+                    hl_close_short(exchange, coin)
+                else:
+                    hl_close_long(exchange, coin)
                 tg(f"  HL rollback完了")
             except Exception as re:
                 tg(f"  HL rollback失敗: {re}")
             continue
 
         positions[coin] = {
+            "direction":     direction,
             "opened_at":     ts,
             "fr_at_entry":   avg_fr,
             "size_usd":      TRADE_SIZE_USD,
@@ -337,20 +406,22 @@ def main():
 
         tg(
             f"🟢 ENTRY: {coin}\n"
-            f"FR: {avg_fr:.4%}/h\n"
+            f"方向: {side_label}\n"
+            f"FR: {avg_fr_raw:.4%}/h\n"
             f"Size: ${TRADE_SIZE_USD}\n"
-            f"HL SHORT @ {hl_res['entry_price']:.6f}  ({hl_res['size_coin']} coins)\n"
-            f"MEXC LONG @ {mx_res['entry_price']:.6f}  ({mx_res['contracts']} contracts)"
+            f"HL @ {hl_res['entry_price']:.6f}  ({hl_res['size_coin']} coins)\n"
+            f"MEXC @ {mx_res['entry_price']:.6f}  ({mx_res['contracts']} contracts)"
         )
         send_gmail(
-            subject=f"[MindRaid] ENTRY: {coin}",
+            subject=f"[MindRaid] ENTRY: {coin}  {side_label}",
             body=(
                 f"FR Arb エントリー\n\n"
                 f"銘柄: {coin}\n"
-                f"FR: {avg_fr:.4%}/h\n"
+                f"方向: {side_label}\n"
+                f"FR: {avg_fr_raw:.4%}/h\n"
                 f"サイズ: ${TRADE_SIZE_USD}\n"
-                f"HL SHORT @ {hl_res['entry_price']:.6f}\n"
-                f"MEXC LONG @ {mx_res['entry_price']:.6f}\n"
+                f"HL @ {hl_res['entry_price']:.6f}\n"
+                f"MEXC @ {mx_res['entry_price']:.6f}\n"
                 f"時刻: {ts} UTC"
             )
         )

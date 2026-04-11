@@ -2,7 +2,7 @@ name: Funding Logger
 
 on:
   schedule:
-    - cron: '*/30 * * * *'   # 30分毎（UTC）に実行
+    - cron: '*/15 * * * *'   # 15分毎（UTC）に実行
   workflow_dispatch:        # GitHub UI から手動実行も可
 
 jobs:
