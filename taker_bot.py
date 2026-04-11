@@ -31,6 +31,8 @@ from hyperliquid.info import Info
 TRADE_SIZE_USD  = float(os.environ.get("TRADE_SIZE_USD", "90"))   # 1ポジションUSDT
 MAX_POSITIONS   = int(os.environ.get("MAX_POSITIONS", "2"))        # 最大同時ポジション数
 MIN_FR_1H       = 0.0012  # エントリー最小FR閾値: 0.12%/h（往復コスト0.17%÷損益分岐1.5h）
+EXIT_FR_1H      = 0.0002  # 決済FR閾値: 0.02%/h（MAKERレート相当、コスト回収前）
+EXIT_FR_RECOVERED = 0.0001  # コスト回収済み後の決済閾値: 0.01%/h（最後まで搾り取る）
 
 DATA_DIR     = os.path.join(os.path.dirname(__file__), "data")
 FUNDING_CSV  = os.path.join(DATA_DIR, "funding_log.csv")
@@ -206,11 +208,27 @@ def main():
     # ── 決済チェック（先に行う）────────────────────────────────
     for coin in list(positions.keys()):
         sig = signals.get(coin, [])
-        if not sig or sig[-1]["taker"]:
-            continue   # まだtaker継続中
+        if not sig:
+            continue
 
-        print(f"[EXIT] {coin}  taker_ok=False → 決済")
-        pos = positions[coin]
+        pos        = positions[coin]
+        current_fr = abs(sig[-1]["fr"])
+        opened     = datetime.strptime(pos["opened_at"], "%Y-%m-%d %H:%M:%S")
+        now_dt     = datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
+        dur_h      = (now_dt - opened).total_seconds() / 3600
+        est_fr_now = abs(pos["fr_at_entry"]) * dur_h * pos["size_usd"]
+        cost       = 0.0017 * pos["size_usd"]
+        cost_recovered = est_fr_now >= cost
+
+        # コスト回収済みなら閾値を下げてギリギリまで粘る
+        exit_threshold = EXIT_FR_RECOVERED if cost_recovered else EXIT_FR_1H
+
+        if current_fr >= exit_threshold:
+            print(f"[HOLD] {coin}  FR={current_fr*100:.4f}%/h  保有継続"
+                  f"{'（コスト回収済）' if cost_recovered else ''}")
+            continue   # まだFRが稼げる → 保有継続
+
+        print(f"[EXIT] {coin}  FR={current_fr*100:.4f}%/h < {exit_threshold*100:.4f}% → 決済")
 
         hl_ok, mexc_ok = False, False
         try:
@@ -228,12 +246,9 @@ def main():
             tg(f"⚠️ EXIT MEXC ERROR: {coin}\n{e}")
 
         if hl_ok and mexc_ok:
-            opened = datetime.strptime(pos["opened_at"], "%Y-%m-%d %H:%M:%S")
-            now_dt = datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
-            dur_h  = (now_dt - opened).total_seconds() / 3600
-            est_fr = pos["fr_at_entry"] * dur_h * pos["size_usd"]
-            est_cost = 0.0017 * pos["size_usd"]   # 往復0.17%（HL 0.09% + MEXC 0.08%）
-            net = est_fr - est_cost
+            est_fr   = est_fr_now
+            est_cost = cost
+            net      = est_fr - est_cost
 
             del positions[coin]
             save_state(state)
