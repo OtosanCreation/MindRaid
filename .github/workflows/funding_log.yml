@@ -1,9 +1,7 @@
 name: Funding Logger
 
 on:
-  schedule:
-    # cron-job.orgからworkflow_dispatchで外部トリガー（30分精確）
-  workflow_dispatch:        # GitHub UI から手動実行も可
+  workflow_dispatch:        # cron-job.orgから外部トリガー（30分精確）
 
 jobs:
   log-funding:
