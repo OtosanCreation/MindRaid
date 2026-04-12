@@ -30,7 +30,7 @@ from hyperliquid.info import Info
 # ── 設定 ────────────────────────────────────────────────────────
 TRADE_SIZE_USD  = float(os.environ.get("TRADE_SIZE_USD", "90"))   # 1ポジションUSDT
 MAX_POSITIONS   = int(os.environ.get("MAX_POSITIONS", "2"))        # 最大同時ポジション数
-MIN_FR_1H       = 0.0012  # エントリー最小FR閾値: 0.12%/h（往復コスト0.17%÷損益分岐1.5h）
+MIN_FR_1H       = 0.0010  # エントリー最小FR閾値: 0.10%/h（トライアルフェーズ、サンプル収集優先）
 EXIT_FR_1H      = 0.0002  # 決済FR閾値: 0.02%/h（MAKERレート相当、コスト回収前）
 EXIT_FR_RECOVERED = 0.0001  # コスト回収済み後の決済閾値: 0.01%/h（最後まで搾り取る）
 
@@ -133,12 +133,22 @@ def get_latest_signals(n: int = 2) -> dict:
 
 
 # ── HL ───────────────────────────────────────────────────────────
-def hl_open_short(exchange: Exchange, info: Info, coin: str, size_usd: float) -> dict:
+def get_sz_decimals(info: Info) -> dict:
+    """各コインのszDecimals（注文サイズの有効桁数）を返す {coin: int}"""
+    meta = info.meta()
+    return {a["name"]: a["szDecimals"] for a in meta["universe"]}
+
+
+def hl_open_short(exchange: Exchange, info: Info, coin: str, size_usd: float,
+                  sz_decimals_map: dict = None) -> dict:
     mids  = info.all_mids()
     price = float(mids.get(coin, 0))
     if price == 0:
         raise ValueError(f"HL価格取得失敗: {coin}")
-    sz = round(size_usd / price, 6)
+    decimals = (sz_decimals_map or {}).get(coin, 6)
+    sz = round(size_usd / price, decimals)
+    if sz <= 0:
+        raise ValueError(f"注文サイズが0: {coin} price={price} decimals={decimals}")
     resp = exchange.market_open(coin, is_buy=False, sz=sz, slippage=0.02)
     status = resp.get("response", {}).get("data", {}).get("statuses", [{}])[0]
     if "error" in status:
@@ -156,12 +166,16 @@ def hl_close_short(exchange: Exchange, coin: str) -> dict:
     return {"close_price": filled_price}
 
 
-def hl_open_long(exchange: Exchange, info: Info, coin: str, size_usd: float) -> dict:
+def hl_open_long(exchange: Exchange, info: Info, coin: str, size_usd: float,
+                 sz_decimals_map: dict = None) -> dict:
     mids  = info.all_mids()
     price = float(mids.get(coin, 0))
     if price == 0:
         raise ValueError(f"HL価格取得失敗: {coin}")
-    sz = round(size_usd / price, 6)
+    decimals = (sz_decimals_map or {}).get(coin, 6)
+    sz = round(size_usd / price, decimals)
+    if sz <= 0:
+        raise ValueError(f"注文サイズが0: {coin} price={price} decimals={decimals}")
     resp = exchange.market_open(coin, is_buy=True, sz=sz, slippage=0.02)
     status = resp.get("response", {}).get("data", {}).get("statuses", [{}])[0]
     if "error" in status:
@@ -246,6 +260,8 @@ def main():
     exchange = Exchange(wallet)
     mexc     = get_mexc()
     mexc.load_markets()
+
+    sz_decimals_map = get_sz_decimals(info)
 
     signals = get_latest_signals(n=2)
 
@@ -362,9 +378,9 @@ def main():
         # HL発注
         try:
             if direction == "short_fr":
-                hl_res = hl_open_short(exchange, info, coin, TRADE_SIZE_USD)
+                hl_res = hl_open_short(exchange, info, coin, TRADE_SIZE_USD, sz_decimals_map)
             else:
-                hl_res = hl_open_long(exchange, info, coin, TRADE_SIZE_USD)
+                hl_res = hl_open_long(exchange, info, coin, TRADE_SIZE_USD, sz_decimals_map)
         except Exception as e:
             print(f"  HL open error: {e}")
             tg(f"⚠️ ENTRY HL ERROR: {coin}\n{e}")
