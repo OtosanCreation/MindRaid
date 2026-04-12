@@ -17,7 +17,7 @@ from hyperliquid.info import Info
 
 TAKER_RT  = 0.00035 * 2   # 0.070%
 MAKER_RT  = 0.00010 * 2   # 0.020%
-ENTRY_FR  = 0.0012         # エントリー閾値: 0.12%/h（taker_bot.pyと同値）
+ENTRY_FR  = 0.0010         # エントリー閾値: 0.10%/h（taker_bot.pyと同値）
 
 
 def load_env():
@@ -80,11 +80,17 @@ def build_message(rows, now_str):
         "",
     ]
 
+    entry_candidates = []
+
     top_long = sorted_long[:3]
     if top_long:
         lines.append("🟢 <b>HL SHORT機会 TOP3</b>（FR ネガティブ）")
         for r in top_long:
-            tag = " ✅エントリー圏" if abs(r["rate"]) >= ENTRY_FR else ""
+            if abs(r["rate"]) >= ENTRY_FR:
+                tag = " ⚡エントリー圏"
+                entry_candidates.append((r["coin"], r["rate"], "SHORT"))
+            else:
+                tag = ""
             lines.append(f"  {r['coin']}  <code>{pct(r['rate'])}</code>/h  (8h: {pct(r['rate']*8)}){tag}")
         lines.append("")
 
@@ -92,8 +98,18 @@ def build_message(rows, now_str):
     if top_short:
         lines.append("🔴 <b>HL LONG機会 TOP3</b>（FR ポジティブ）")
         for r in top_short:
-            tag = " ✅エントリー圏" if r["rate"] >= ENTRY_FR else ""
+            if r["rate"] >= ENTRY_FR:
+                tag = " ⚡エントリー圏"
+                entry_candidates.append((r["coin"], r["rate"], "LONG"))
+            else:
+                tag = ""
             lines.append(f"  {r['coin']}  <code>{pct(r['rate'])}</code>/h  (8h: {pct(r['rate']*8)}){tag}")
+        lines.append("")
+
+    if entry_candidates:
+        lines.append("🎯 <b>次のスキャンで継続ならエントリー予定</b>")
+        for coin, rate, side in entry_candidates:
+            lines.append(f"  → {coin}  HL {side}  {pct(rate)}/h")
         lines.append("")
 
     lines.append("※投資助言ではありません")
