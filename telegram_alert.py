@@ -85,7 +85,7 @@ def build_position_section(hl_positions: list, mexc_positions: list) -> list:
     # HLポジション
     if hl_positions:
         for p in hl_positions:
-            pnl  = p["unrealizedPnl"]
+            pnl  = p["unrealized_pnl"]
             fund = p["funding"]
             sign = "+" if pnl >= 0 else ""
             lines.append(
