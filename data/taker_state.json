@@ -1,0 +1,9 @@
+{
+  "positions": {
+    "STABLE": {
+      "status": "danger",
+      "opened_at": "2026-04-13 14:19:24",
+      "reason": "HL close failed: response is None"
+    }
+  }
+}
