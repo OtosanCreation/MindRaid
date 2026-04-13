@@ -304,6 +304,29 @@ def mexc_close_short(mexc: ccxt.mexc, coin: str, contracts: int) -> dict:
     return {"close_price": avg_price}
 
 
+def mexc_force_close(mexc: ccxt.mexc, coin: str, direction: str) -> dict:
+    """mexc close失敗時のフォールバック: fetch_positionsから実サイズを取得してクローズ"""
+    symbol    = f"{coin}/USDT:USDT"
+    positions = mexc.fetch_positions([symbol])
+    pos = next(
+        (p for p in positions
+         if p.get("symbol") == symbol and float(p.get("contracts") or 0) > 0),
+        None
+    )
+    if pos is None:
+        return {"close_price": 0.0}  # すでに決済済み
+
+    contracts = int(float(pos["contracts"]))
+    # short_fr: MEXC LONG を閉じる = SELL
+    # long_fr:  MEXC SHORT を閉じる = BUY
+    if direction == "short_fr":
+        order = mexc.create_market_sell_order(symbol, contracts, params={"reduceOnly": True})
+    else:
+        order = mexc.create_market_buy_order(symbol, contracts, params={"reduceOnly": True})
+    avg_price = float(order.get("average") or order.get("price") or 0)
+    return {"close_price": avg_price}
+
+
 # ── メインロジック ────────────────────────────────────────────────
 def main():
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
@@ -460,6 +483,15 @@ def main():
                     print(f"  MEXC {coin} ポジションなし確認 → 決済済みとみなす")
                     mexc_ok = True
                     break
+                # フォールバック: fetch_positionsから実サイズ取得してクローズ
+                try:
+                    mexc_force_close(mexc, coin, direction)
+                    print(f"  MEXC force close成功")
+                    tg(f"⚠️ MEXC 強制決済実行: {coin}\n通常クローズ失敗のため実ポジション取得して強制クローズしました")
+                    mexc_ok = True
+                    break
+                except Exception as mfe:
+                    print(f"  MEXC force close失敗: {mfe}")
                 if attempt == 3:
                     tg(f"⚠️ EXIT MEXC ERROR: {coin}\n3回失敗\n{err_str}")
                 else:
