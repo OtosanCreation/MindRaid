@@ -139,6 +139,23 @@ def get_sz_decimals(info: Info) -> dict:
     return {a["name"]: a["szDecimals"] for a in meta["universe"]}
 
 
+def get_hl_open_coins(info: Info, address: str) -> set:
+    """HLで実際に開いているポジションのコイン名セットを返す（state.jsonの代替確認）"""
+    try:
+        user_state = info.user_state(address)
+        result = set()
+        for pos in user_state.get("assetPositions", []):
+            p    = pos.get("position", {})
+            coin = p.get("coin")
+            szi  = float(p.get("szi", 0))
+            if coin and szi != 0:
+                result.add(coin)
+        return result
+    except Exception as e:
+        print(f"[WARN] HL実ポジション取得失敗: {e}")
+        return set()
+
+
 def hl_open_short(exchange: Exchange, info: Info, coin: str, size_usd: float,
                   sz_decimals_map: dict = None) -> dict:
     mids  = info.all_mids()
@@ -266,6 +283,8 @@ def main():
     mexc.load_markets()
 
     sz_decimals_map = get_sz_decimals(info)
+    hl_open_coins   = get_hl_open_coins(info, wallet.address)
+    print(f"HL実ポジション: {hl_open_coins or 'なし'}")
 
     signals = get_latest_signals(n=2)
 
@@ -426,6 +445,11 @@ def main():
             if positions[coin].get("status") == "danger":
                 print(f"[DANGER] {coin} 危険ポジションフラグあり → スキップ")
                 tg(f"🚨 危険ポジション未解決: {coin}\nHL手動確認・決済してください")
+            continue
+        # state.jsonになくてもHL実ポジションがあればスキップ（二重エントリー防止）
+        if coin in hl_open_coins:
+            print(f"[SKIP] {coin} HL実ポジションあり（state未記録）→ エントリースキップ")
+            tg(f"⚠️ {coin} HLにポジションあり（state未記録）\n手動確認してください")
             continue
         if len(positions) >= MAX_POSITIONS:
             print(f"MAX_POSITIONS ({MAX_POSITIONS}) 到達 → スキップ")
