@@ -471,6 +471,12 @@ def main():
 
         print(f"[ENTRY] {coin}  avg_FR={avg_fr_raw:.4%}/h  {side_label}  size=${TRADE_SIZE_USD}")
 
+        # HL レバレッジを1xに設定してから発注
+        try:
+            exchange.update_leverage(1, coin, is_cross=True)
+        except Exception as e:
+            print(f"  [WARN] HL leverage set failed: {e}")
+
         # HL発注
         try:
             if direction == "short_fr":
