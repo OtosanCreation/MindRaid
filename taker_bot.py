@@ -358,6 +358,9 @@ def main():
     # ── エントリーチェック ──────────────────────────────────────
     for coin, rows in signals.items():
         if coin in positions:
+            if positions[coin].get("status") == "danger":
+                print(f"[DANGER] {coin} 危険ポジションフラグあり → スキップ")
+                tg(f"🚨 危険ポジション未解決: {coin}\nHL手動確認・決済してください")
             continue
         if len(positions) >= MAX_POSITIONS:
             print(f"MAX_POSITIONS ({MAX_POSITIONS}) 到達 → スキップ")
@@ -409,6 +412,9 @@ def main():
                 tg(f"  HL rollback完了")
             except Exception as re:
                 tg(f"  HL rollback失敗: {re}")
+                positions[coin] = {"status": "danger", "opened_at": ts, "reason": str(re)}
+                save_state(state)
+                tg(f"🚨 危険ポジション記録: {coin}\nHL裸ポジションあり。手動で確認・決済してください")
             continue
 
         positions[coin] = {
