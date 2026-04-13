@@ -214,6 +214,42 @@ def hl_close_long(exchange: Exchange, coin: str) -> dict:
     return {"close_price": filled_price}
 
 
+def hl_force_close(exchange: Exchange, info: Info, coin: str, address: str,
+                   sz_decimals_map: dict = None) -> dict:
+    """market_close失敗時のフォールバック: user_stateから実サイズを取得してIOC指値でクローズ"""
+    user_state = info.user_state(address)
+    pos_map = {p["position"]["coin"]: p["position"]
+               for p in user_state.get("assetPositions", [])}
+    if coin not in pos_map or float(pos_map[coin]["szi"]) == 0:
+        return {"close_price": 0.0}  # すでに決済済み
+
+    szi      = float(pos_map[coin]["szi"])  # 正=LONG, 負=SHORT
+    is_buy   = szi < 0                      # SHORTを閉じるにはBUY
+    decimals = (sz_decimals_map or {}).get(coin, 6)
+    sz       = round(abs(szi), decimals)
+
+    mids  = info.all_mids()
+    price = float(mids.get(coin, 0))
+    if price == 0:
+        raise ValueError(f"HL価格取得失敗: {coin}")
+
+    # 3%スリッページのIOC指値（確実にフィルされるよう広め）
+    limit_px = round(price * (1.03 if is_buy else 0.97), 6)
+
+    resp = exchange.order(
+        coin, is_buy, sz, limit_px,
+        order_type={"limit": {"tif": "Ioc"}},
+        reduce_only=True,
+    )
+    if resp is None:
+        raise RuntimeError("HL force close: order response is None")
+    status = resp.get("response", {}).get("data", {}).get("statuses", [{}])[0]
+    if "error" in status:
+        raise RuntimeError(f"HL force close error: {status['error']}")
+    filled_price = float(status.get("filled", {}).get("avgPx", price))
+    return {"close_price": filled_price}
+
+
 # ── MEXC ─────────────────────────────────────────────────────────
 def get_mexc() -> ccxt.mexc:
     return ccxt.mexc({
@@ -327,6 +363,13 @@ def main():
                         print(f"  HL {coin} ポジション消滅確認 → 決済済みとみなす")
                         hl_ok = True
                         break
+                    try:
+                        hl_force_close(exchange, info, coin, wallet.address, sz_decimals_map)
+                        print(f"  HL force close成功")
+                        hl_ok = True
+                        break
+                    except Exception as fe:
+                        print(f"  HL force close失敗: {fe}")
                     if attempt < 3:
                         time.sleep(2)
             if hl_ok:
@@ -378,12 +421,20 @@ def main():
                 break
             except Exception as e:
                 print(f"  HL close attempt {attempt}/3: {e}")
-                # response is None の場合、実際にポジションが消えているか確認
+                # ポジション消滅確認
                 open_coins = get_hl_open_coins(info, wallet.address)
                 if coin not in open_coins:
                     print(f"  HL {coin} ポジション消滅確認 → 決済済みとみなす")
                     hl_ok = True
                     break
+                # フォールバック: 直接orderAPIでクローズ
+                try:
+                    hl_force_close(exchange, info, coin, wallet.address, sz_decimals_map)
+                    print(f"  HL force close成功")
+                    hl_ok = True
+                    break
+                except Exception as fe:
+                    print(f"  HL force close失敗: {fe}")
                 if attempt == 3:
                     tg(f"⚠️ EXIT HL ERROR: {coin}\n3回失敗\n{e}")
                 else:
