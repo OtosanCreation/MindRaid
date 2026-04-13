@@ -177,6 +177,9 @@ def build_message(rows, now_str, hl_positions=None, mexc_positions=None):
         "",
     ]
 
+    # 既存ポジションの銘柄セット（エントリー予定から除外するため）
+    open_coins = {p["coin"] for p in (hl_positions or [])}
+
     entry_candidates = []
 
     top_long = sorted_long[:3]
@@ -184,8 +187,11 @@ def build_message(rows, now_str, hl_positions=None, mexc_positions=None):
         lines.append("🟢 <b>HL SHORT機会 TOP3</b>（FR ネガティブ）")
         for r in top_long:
             if abs(r["rate"]) >= ENTRY_FR:
-                tag = " ⚡エントリー圏"
-                entry_candidates.append((r["coin"], r["rate"], "SHORT"))
+                if r["coin"] in open_coins:
+                    tag = " ⚡保有中"
+                else:
+                    tag = " ⚡エントリー圏"
+                    entry_candidates.append((r["coin"], r["rate"], "SHORT"))
             else:
                 tag = ""
             lines.append(f"  {r['coin']}  <code>{pct(r['rate'])}</code>/h  (8h: {pct(r['rate']*8)}){tag}")
@@ -196,8 +202,11 @@ def build_message(rows, now_str, hl_positions=None, mexc_positions=None):
         lines.append("🔴 <b>HL LONG機会 TOP3</b>（FR ポジティブ）")
         for r in top_short:
             if r["rate"] >= ENTRY_FR:
-                tag = " ⚡エントリー圏"
-                entry_candidates.append((r["coin"], r["rate"], "LONG"))
+                if r["coin"] in open_coins:
+                    tag = " ⚡保有中"
+                else:
+                    tag = " ⚡エントリー圏"
+                    entry_candidates.append((r["coin"], r["rate"], "LONG"))
             else:
                 tag = ""
             lines.append(f"  {r['coin']}  <code>{pct(r['rate'])}</code>/h  (8h: {pct(r['rate']*8)}){tag}")
