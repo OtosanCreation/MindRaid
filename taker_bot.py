@@ -271,11 +271,42 @@ def main():
 
     # ── 決済チェック（先に行う）────────────────────────────────
     for coin in list(positions.keys()):
+        pos = positions[coin]
+
+        # ── dangerポジション：HLのみ決済（リトライ×3）──────────
+        if pos.get("status") == "danger":
+            print(f"[DANGER EXIT] {coin} HL裸ポジション → 決済試行")
+            direction = pos.get("direction", "short_fr")
+            hl_ok = False
+            for attempt in range(1, 4):
+                try:
+                    if direction == "short_fr":
+                        hl_close_short(exchange, coin)
+                    else:
+                        hl_close_long(exchange, coin)
+                    hl_ok = True
+                    break
+                except Exception as e:
+                    print(f"  HL danger close attempt {attempt}/3: {e}")
+                    if attempt < 3:
+                        time.sleep(2)
+            if hl_ok:
+                del positions[coin]
+                save_state(state)
+                tg(f"✅ DANGER EXIT完了: {coin}\nHL裸ポジションを決済しました")
+                send_gmail(
+                    subject=f"[MindRaid] DANGER EXIT: {coin}",
+                    body=f"危険ポジション（HL裸）を自動決済しました。\n銘柄: {coin}\n時刻: {ts} UTC"
+                )
+            else:
+                tg(f"🚨 DANGER EXIT失敗: {coin}\n3回試行しても決済できません\n手動でHL確認してください")
+            continue
+
+        # ── 通常ポジション：決済判断 ──────────────────────────
         sig = signals.get(coin, [])
         if not sig:
             continue
 
-        pos        = positions[coin]
         current_fr = abs(sig[-1]["fr"])
         opened     = datetime.strptime(pos["opened_at"], "%Y-%m-%d %H:%M:%S")
         now_dt     = datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
@@ -284,39 +315,51 @@ def main():
         cost       = 0.0017 * pos["size_usd"]
         cost_recovered = est_fr_now >= cost
 
-        # コスト回収済みなら閾値を下げてギリギリまで粘る
         exit_threshold = EXIT_FR_RECOVERED if cost_recovered else EXIT_FR_1H
 
         if current_fr >= exit_threshold:
             print(f"[HOLD] {coin}  FR={current_fr*100:.4f}%/h  保有継続"
                   f"{'（コスト回収済）' if cost_recovered else ''}")
-            continue   # まだFRが稼げる → 保有継続
+            continue
 
         print(f"[EXIT] {coin}  FR={current_fr*100:.4f}%/h < {exit_threshold*100:.4f}% → 決済")
 
-        direction = pos.get("direction", "short_fr")  # 旧stateとの後方互換
+        direction  = pos.get("direction", "short_fr")
         side_label = "HL SHORT × MEXC LONG" if direction == "short_fr" else "HL LONG × MEXC SHORT"
 
-        hl_ok, mexc_ok = False, False
-        try:
-            if direction == "short_fr":
-                hl_close_short(exchange, coin)
-            else:
-                hl_close_long(exchange, coin)
-            hl_ok = True
-        except Exception as e:
-            print(f"  HL close error: {e}")
-            tg(f"⚠️ EXIT HL ERROR: {coin}\n{e}")
+        # HL決済（リトライ×3）
+        hl_ok = False
+        for attempt in range(1, 4):
+            try:
+                if direction == "short_fr":
+                    hl_close_short(exchange, coin)
+                else:
+                    hl_close_long(exchange, coin)
+                hl_ok = True
+                break
+            except Exception as e:
+                print(f"  HL close attempt {attempt}/3: {e}")
+                if attempt == 3:
+                    tg(f"⚠️ EXIT HL ERROR: {coin}\n3回失敗\n{e}")
+                else:
+                    time.sleep(2)
 
-        try:
-            if direction == "short_fr":
-                mexc_close_long(mexc, coin, int(pos["mexc_contracts"]))
-            else:
-                mexc_close_short(mexc, coin, int(pos["mexc_contracts"]))
-            mexc_ok = True
-        except Exception as e:
-            print(f"  MEXC close error: {e}")
-            tg(f"⚠️ EXIT MEXC ERROR: {coin}\n{e}")
+        # MEXC決済（リトライ×3）
+        mexc_ok = False
+        for attempt in range(1, 4):
+            try:
+                if direction == "short_fr":
+                    mexc_close_long(mexc, coin, int(pos["mexc_contracts"]))
+                else:
+                    mexc_close_short(mexc, coin, int(pos["mexc_contracts"]))
+                mexc_ok = True
+                break
+            except Exception as e:
+                print(f"  MEXC close attempt {attempt}/3: {e}")
+                if attempt == 3:
+                    tg(f"⚠️ EXIT MEXC ERROR: {coin}\n3回失敗\n{e}")
+                else:
+                    time.sleep(2)
 
         if hl_ok and mexc_ok:
             est_fr   = est_fr_now
@@ -354,6 +397,13 @@ def main():
                 )
             )
             print(f"  → 決済完了  推定net: ${net:.2f}")
+        else:
+            # 片方失敗 → stateは残したまま次スキャンで再試行
+            tg(
+                f"⚠️ EXIT 部分失敗: {coin}\n"
+                f"HL: {'✅' if hl_ok else '❌'}  MEXC: {'✅' if mexc_ok else '❌'}\n"
+                f"次のスキャンで再試行します"
+            )
 
     # ── エントリーチェック ──────────────────────────────────────
     for coin, rows in signals.items():
