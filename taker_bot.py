@@ -366,6 +366,7 @@ def main():
                     try:
                         hl_force_close(exchange, info, coin, wallet.address, sz_decimals_map)
                         print(f"  HL force close成功")
+                        tg(f"⚠️ HL 強制決済実行: {coin}\nmarket_close失敗のためIOC指値注文で強制クローズしました")
                         hl_ok = True
                         break
                     except Exception as fe:
@@ -431,6 +432,7 @@ def main():
                 try:
                     hl_force_close(exchange, info, coin, wallet.address, sz_decimals_map)
                     print(f"  HL force close成功")
+                    tg(f"⚠️ HL 強制決済実行: {coin}\nmarket_close失敗のためIOC指値注文で強制クローズしました")
                     hl_ok = True
                     break
                 except Exception as fe:
