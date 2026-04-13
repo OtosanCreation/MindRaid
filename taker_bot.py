@@ -159,6 +159,8 @@ def hl_open_short(exchange: Exchange, info: Info, coin: str, size_usd: float,
 
 def hl_close_short(exchange: Exchange, coin: str) -> dict:
     resp = exchange.market_close(coin, slippage=0.02)
+    if resp is None:
+        raise RuntimeError("HL close failed: response is None")
     status = resp.get("response", {}).get("data", {}).get("statuses", [{}])[0]
     if "error" in status:
         raise RuntimeError(f"HL close error: {status['error']}")
@@ -186,6 +188,8 @@ def hl_open_long(exchange: Exchange, info: Info, coin: str, size_usd: float,
 
 def hl_close_long(exchange: Exchange, coin: str) -> dict:
     resp = exchange.market_close(coin, slippage=0.02)
+    if resp is None:
+        raise RuntimeError("HL close failed: response is None")
     status = resp.get("response", {}).get("data", {}).get("statuses", [{}])[0]
     if "error" in status:
         raise RuntimeError(f"HL close error: {status['error']}")
