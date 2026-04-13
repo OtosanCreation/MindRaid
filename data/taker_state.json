@@ -1,26 +1,3 @@
 {
-  "positions": {
-    "STABLE": {
-      "direction": "short_fr",
-      "opened_at": "2026-04-13 15:14:42",
-      "fr_at_entry": 0.00340272055,
-      "size_usd": 90.0,
-      "hl_size_coin": 3317.0,
-      "hl_entry_price": 0.027143,
-      "mexc_contracts": 331,
-      "mexc_contract_size": 10.0,
-      "mexc_entry_price": 0.02719
-    },
-    "0G": {
-      "direction": "short_fr",
-      "opened_at": "2026-04-14 01:31:48",
-      "fr_at_entry": 0.0010810453000000002,
-      "size_usd": 90.0,
-      "hl_size_coin": 153.0,
-      "hl_entry_price": 0.58864,
-      "mexc_contracts": 153,
-      "mexc_contract_size": 1.0,
-      "mexc_entry_price": 0.5884
-    }
-  }
+  "positions": {}
 }

@@ -322,6 +322,11 @@ def main():
                     break
                 except Exception as e:
                     print(f"  HL danger close attempt {attempt}/3: {e}")
+                    open_coins = get_hl_open_coins(info, wallet.address)
+                    if coin not in open_coins:
+                        print(f"  HL {coin} ポジション消滅確認 → 決済済みとみなす")
+                        hl_ok = True
+                        break
                     if attempt < 3:
                         time.sleep(2)
             if hl_ok:
@@ -373,6 +378,12 @@ def main():
                 break
             except Exception as e:
                 print(f"  HL close attempt {attempt}/3: {e}")
+                # response is None の場合、実際にポジションが消えているか確認
+                open_coins = get_hl_open_coins(info, wallet.address)
+                if coin not in open_coins:
+                    print(f"  HL {coin} ポジション消滅確認 → 決済済みとみなす")
+                    hl_ok = True
+                    break
                 if attempt == 3:
                     tg(f"⚠️ EXIT HL ERROR: {coin}\n3回失敗\n{e}")
                 else:
@@ -389,9 +400,15 @@ def main():
                 mexc_ok = True
                 break
             except Exception as e:
-                print(f"  MEXC close attempt {attempt}/3: {e}")
+                err_str = str(e)
+                print(f"  MEXC close attempt {attempt}/3: {err_str}")
+                # すでに決済済み（ポジションなし）は成功とみなす
+                if "nonexistent or closed" in err_str or "Position is nonexistent" in err_str:
+                    print(f"  MEXC {coin} ポジションなし確認 → 決済済みとみなす")
+                    mexc_ok = True
+                    break
                 if attempt == 3:
-                    tg(f"⚠️ EXIT MEXC ERROR: {coin}\n3回失敗\n{e}")
+                    tg(f"⚠️ EXIT MEXC ERROR: {coin}\n3回失敗\n{err_str}")
                 else:
                     time.sleep(2)
 
