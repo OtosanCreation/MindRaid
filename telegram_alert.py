@@ -14,62 +14,99 @@ import urllib.parse
 import json
 from datetime import datetime, timezone
 from hyperliquid.info import Info
-
-STATE_FILE = os.path.join(os.path.dirname(__file__), "data", "taker_state.json")
-
-
-def load_positions() -> dict:
-    if os.path.exists(STATE_FILE):
-        with open(STATE_FILE) as f:
-            return json.load(f).get("positions", {})
-    return {}
+import ccxt
 
 
-def build_position_section(positions: dict, mids: dict, now_str: str) -> list:
-    if not positions:
+def fetch_hl_positions(address: str) -> list:
+    """HL APIから実際のオープンポジションを取得"""
+    if not address:
+        return []
+    try:
+        info = Info(skip_ws=True)
+        user_state = info.user_state(address)
+        result = []
+        for pos in user_state.get("assetPositions", []):
+            p   = pos.get("position", {})
+            szi = float(p.get("szi", 0))
+            if szi == 0:
+                continue
+            result.append({
+                "coin":          p.get("coin"),
+                "side":          "SHORT" if szi < 0 else "LONG",
+                "size":          abs(szi),
+                "entry_px":      float(p.get("entryPx") or 0),
+                "mark_px":       float(p.get("positionValue", 0)) / abs(szi) if szi != 0 else 0,
+                "unrealized_pnl": float(p.get("unrealizedPnl") or 0),
+                "funding":       float(p.get("cumFunding", {}).get("sinceOpen", 0)),
+            })
+        return result
+    except Exception as e:
+        print(f"[WARN] HL実ポジション取得失敗: {e}")
+        return []
+
+
+def fetch_mexc_positions(api_key: str, api_secret: str) -> list:
+    """MEXC APIから実際のオープンポジションを取得"""
+    if not api_key or not api_secret:
+        return []
+    try:
+        mexc = ccxt.mexc({
+            "apiKey": api_key,
+            "secret": api_secret,
+            "options": {"defaultType": "swap"},
+        })
+        positions = mexc.fetch_positions()
+        result = []
+        for pos in positions:
+            contracts = float(pos.get("contracts") or 0)
+            if contracts == 0:
+                continue
+            result.append({
+                "coin":          pos["symbol"].split("/")[0],
+                "side":          pos.get("side", "").upper(),
+                "contracts":     contracts,
+                "entry_price":   float(pos.get("entryPrice") or 0),
+                "unrealized_pnl": float(pos.get("unrealizedPnl") or 0),
+            })
+        return result
+    except Exception as e:
+        print(f"[WARN] MEXC実ポジション取得失敗: {e}")
+        return []
+
+
+def build_position_section(hl_positions: list, mexc_positions: list) -> list:
+    if not hl_positions and not mexc_positions:
         return []
 
     lines = ["📊 <b>現在のポジション</b>"]
-    now_dt = datetime.strptime(now_str, "%Y-%m-%d %H:%M")
 
-    for coin, pos in positions.items():
-        if pos.get("status") == "danger":
-            lines.append(f"  🚨 {coin}  危険ポジション（HL裸）手動確認要")
-            continue
+    # HLポジション
+    if hl_positions:
+        for p in hl_positions:
+            pnl  = p["unrealizedPnl"]
+            fund = p["funding"]
+            sign = "+" if pnl >= 0 else ""
+            lines.append(
+                f"  {'🟢' if p['side']=='SHORT' else '🔴'} HL {p['coin']} {p['side']}"
+                f"  {p['size']:.4f}枚 @ ${p['entry_px']:.4f}"
+                f"\n    未実現PNL: <code>{sign}{pnl:.2f}$</code>"
+                f"  累計FR: <code>{'+' if fund>=0 else ''}{fund:.2f}$</code>"
+            )
+    else:
+        lines.append("  HL: ポジションなし")
 
-        direction   = pos.get("direction", "short_fr")
-        side        = "SHORT" if direction == "short_fr" else "LONG"
-        entry_price = float(pos.get("hl_entry_price", 0))
-        size_coin   = float(pos.get("hl_size_coin", 0))
-        size_usd    = float(pos.get("size_usd", 0))
-        fr_entry    = float(pos.get("fr_at_entry", 0))
-        opened_at   = pos.get("opened_at", "")
-
-        current_price = float(mids.get(coin, entry_price))
-
-        # 価格損益
-        if direction == "short_fr":
-            price_pnl = (entry_price - current_price) * size_coin
-        else:
-            price_pnl = (current_price - entry_price) * size_coin
-
-        # FR推定収益
-        try:
-            opened_dt = datetime.strptime(opened_at, "%Y-%m-%d %H:%M:%S")
-            dur_h = (now_dt - opened_dt).total_seconds() / 3600
-        except Exception:
-            dur_h = 0
-        est_fr  = fr_entry * dur_h * size_usd
-        est_net = price_pnl + est_fr
-
-        sign = "+" if est_net >= 0 else ""
-        lines.append(
-            f"  {'🟢' if direction == 'short_fr' else '🔴'} {coin} HL {side}"
-            f"  ${size_usd:.0f}  {dur_h:.1f}h"
-            f"\n    価格損益: <code>{'+' if price_pnl>=0 else ''}{price_pnl:.2f}$</code>"
-            f"  FR収益: <code>+{est_fr:.2f}$</code>"
-            f"  推定net: <code>{sign}{est_net:.2f}$</code>"
-        )
+    # MEXCポジション
+    if mexc_positions:
+        for p in mexc_positions:
+            pnl  = p["unrealized_pnl"]
+            sign = "+" if pnl >= 0 else ""
+            lines.append(
+                f"  {'🔴' if p['side']=='LONG' else '🟢'} MEXC {p['coin']} {p['side']}"
+                f"  {p['contracts']:.0f}枚 @ ${p['entry_price']:.4f}"
+                f"\n    未実現PNL: <code>{sign}{pnl:.2f}$</code>"
+            )
+    else:
+        lines.append("  MEXC: ポジションなし")
 
     lines.append("")
     return lines
@@ -120,7 +157,7 @@ def send_message(token, chat_id, text):
         return json.loads(resp.read())
 
 
-def build_message(rows, now_str, positions=None, mids=None):
+def build_message(rows, now_str, hl_positions=None, mexc_positions=None):
     sorted_long  = sorted([r for r in rows if r["rate"] < 0], key=lambda r: r["rate"])
     sorted_short = sorted([r for r in rows if r["rate"] > 0], key=lambda r: r["rate"], reverse=True)
     maker_total = sum(1 for r in rows if abs(r["rate"]) > MAKER_RT)
@@ -170,7 +207,7 @@ def build_message(rows, now_str, positions=None, mids=None):
             lines.append(f"  → {coin}  HL {side}  {pct(rate)}/h")
         lines.append("")
 
-    pos_lines = build_position_section(positions or {}, mids or {}, now_str)
+    pos_lines = build_position_section(hl_positions or [], mexc_positions or [])
     lines.extend(pos_lines)
 
     lines.append("※投資助言ではありません")
@@ -186,10 +223,14 @@ def main():
     print("Fetching funding data …")
     info = Info(skip_ws=True)
     rows = fetch_data(info)
-    mids = info.all_mids()
-    positions = load_positions()
 
-    msg = build_message(rows, now_str, positions=positions, mids=mids)
+    hl_address    = os.environ.get("HL_WALLET_ADDRESS", "")
+    mexc_api_key  = os.environ.get("MEXC_API_KEY", "")
+    mexc_api_sec  = os.environ.get("MEXC_API_SECRET", "")
+    hl_positions   = fetch_hl_positions(hl_address)
+    mexc_positions = fetch_mexc_positions(mexc_api_key, mexc_api_sec)
+
+    msg = build_message(rows, now_str, hl_positions=hl_positions, mexc_positions=mexc_positions)
     print("--- Message preview ---")
     print(msg)
     print("-----------------------")
