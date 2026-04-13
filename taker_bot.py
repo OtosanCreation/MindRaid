@@ -386,16 +386,17 @@ def main():
                         print(f"  HL {coin} ポジション消滅確認 → 決済済みとみなす")
                         hl_ok = True
                         break
-                    try:
-                        hl_force_close(exchange, info, coin, wallet.address, sz_decimals_map)
-                        print(f"  HL force close成功")
-                        tg(f"⚠️ HL 強制決済実行: {coin}\nmarket_close失敗のためIOC指値注文で強制クローズしました")
-                        hl_ok = True
-                        break
-                    except Exception as fe:
-                        print(f"  HL force close失敗: {fe}")
                     if attempt < 3:
                         time.sleep(2)
+            # 3回失敗 → force_closeを最終手段として試行
+            if not hl_ok:
+                try:
+                    hl_force_close(exchange, info, coin, wallet.address, sz_decimals_map)
+                    print(f"  HL force close成功")
+                    tg(f"⚠️ HL 強制決済実行: {coin}\nmarket_close 3回失敗のためIOC指値注文で強制クローズしました")
+                    hl_ok = True
+                except Exception as fe:
+                    print(f"  HL force close失敗: {fe}")
             if hl_ok:
                 del positions[coin]
                 save_state(state)
@@ -445,25 +446,23 @@ def main():
                 break
             except Exception as e:
                 print(f"  HL close attempt {attempt}/3: {e}")
-                # ポジション消滅確認
                 open_coins = get_hl_open_coins(info, wallet.address)
                 if coin not in open_coins:
                     print(f"  HL {coin} ポジション消滅確認 → 決済済みとみなす")
                     hl_ok = True
                     break
-                # フォールバック: 直接orderAPIでクローズ
-                try:
-                    hl_force_close(exchange, info, coin, wallet.address, sz_decimals_map)
-                    print(f"  HL force close成功")
-                    tg(f"⚠️ HL 強制決済実行: {coin}\nmarket_close失敗のためIOC指値注文で強制クローズしました")
-                    hl_ok = True
-                    break
-                except Exception as fe:
-                    print(f"  HL force close失敗: {fe}")
-                if attempt == 3:
-                    tg(f"⚠️ EXIT HL ERROR: {coin}\n3回失敗\n{e}")
-                else:
+                if attempt < 3:
                     time.sleep(2)
+        # 3回失敗 → force_closeを最終手段として試行
+        if not hl_ok:
+            try:
+                hl_force_close(exchange, info, coin, wallet.address, sz_decimals_map)
+                print(f"  HL force close成功")
+                tg(f"⚠️ HL 強制決済実行: {coin}\nmarket_close 3回失敗のためIOC指値注文で強制クローズしました")
+                hl_ok = True
+            except Exception as fe:
+                tg(f"⚠️ EXIT HL ERROR: {coin}\n3回失敗 + 強制決済も失敗\n手動確認してください")
+                print(f"  HL force close失敗: {fe}")
 
         # MEXC決済（リトライ×3）
         mexc_ok = False
@@ -483,19 +482,18 @@ def main():
                     print(f"  MEXC {coin} ポジションなし確認 → 決済済みとみなす")
                     mexc_ok = True
                     break
-                # フォールバック: fetch_positionsから実サイズ取得してクローズ
-                try:
-                    mexc_force_close(mexc, coin, direction)
-                    print(f"  MEXC force close成功")
-                    tg(f"⚠️ MEXC 強制決済実行: {coin}\n通常クローズ失敗のため実ポジション取得して強制クローズしました")
-                    mexc_ok = True
-                    break
-                except Exception as mfe:
-                    print(f"  MEXC force close失敗: {mfe}")
-                if attempt == 3:
-                    tg(f"⚠️ EXIT MEXC ERROR: {coin}\n3回失敗\n{err_str}")
-                else:
+                if attempt < 3:
                     time.sleep(2)
+        # 3回失敗 → force_closeを最終手段として試行
+        if not mexc_ok:
+            try:
+                mexc_force_close(mexc, coin, direction)
+                print(f"  MEXC force close成功")
+                tg(f"⚠️ MEXC 強制決済実行: {coin}\n通常クローズ 3回失敗のため実ポジション取得して強制クローズしました")
+                mexc_ok = True
+            except Exception as mfe:
+                tg(f"⚠️ EXIT MEXC ERROR: {coin}\n3回失敗 + 強制決済も失敗\n手動確認してください")
+                print(f"  MEXC force close失敗: {mfe}")
 
         if hl_ok and mexc_ok:
             est_fr   = est_fr_now
