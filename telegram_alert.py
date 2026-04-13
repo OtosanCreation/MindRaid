@@ -75,10 +75,12 @@ def fetch_mexc_positions(api_key: str, api_secret: str) -> list:
 
 
 def build_position_section(hl_positions: list, mexc_positions: list) -> list:
-    if not hl_positions and not mexc_positions:
-        return []
-
     lines = ["📊 <b>現在のポジション</b>"]
+
+    if not hl_positions and not mexc_positions:
+        lines.append("  HL / MEXC: ポジションなし")
+        lines.append("")
+        return lines
 
     # HLポジション
     if hl_positions:
