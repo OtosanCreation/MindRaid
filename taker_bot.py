@@ -273,9 +273,24 @@ def main():
     for coin in list(positions.keys()):
         pos = positions[coin]
 
-        # ── dangerポジション：HLのみ決済（リトライ×3）──────────
+        # ── dangerポジション：FR閾値監視 → 閾値割れでHLのみ決済 ──
         if pos.get("status") == "danger":
-            print(f"[DANGER EXIT] {coin} HL裸ポジション → 決済試行")
+            sig = signals.get(coin, [])
+            if not sig:
+                tg(f"🚨 危険ポジション保有中: {coin}（FRデータなし）\nHL手動確認してください")
+                continue
+
+            current_fr = abs(sig[-1]["fr"])
+            opened     = datetime.strptime(pos["opened_at"], "%Y-%m-%d %H:%M:%S")
+            now_dt     = datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
+            dur_h      = (now_dt - opened).total_seconds() / 3600
+
+            if current_fr >= EXIT_FR_1H:
+                print(f"[DANGER HOLD] {coin}  FR={current_fr*100:.4f}%/h  保有継続（HL裸注意）")
+                tg(f"⚠️ 危険ポジション保有中: {coin}  FR={current_fr*100:.4f}%/h\nHL裸ショート・MEXCヘッジなし")
+                continue
+
+            print(f"[DANGER EXIT] {coin}  FR={current_fr*100:.4f}%/h < {EXIT_FR_1H*100:.4f}% → HL決済試行")
             direction = pos.get("direction", "short_fr")
             hl_ok = False
             for attempt in range(1, 4):
@@ -293,10 +308,10 @@ def main():
             if hl_ok:
                 del positions[coin]
                 save_state(state)
-                tg(f"✅ DANGER EXIT完了: {coin}\nHL裸ポジションを決済しました")
+                tg(f"✅ DANGER EXIT完了: {coin}\nHL裸ポジションを決済しました\n保有: {dur_h:.1f}h")
                 send_gmail(
                     subject=f"[MindRaid] DANGER EXIT: {coin}",
-                    body=f"危険ポジション（HL裸）を自動決済しました。\n銘柄: {coin}\n時刻: {ts} UTC"
+                    body=f"危険ポジション（HL裸）を自動決済しました。\n銘柄: {coin}\n保有時間: {dur_h:.1f}h\n時刻: {ts} UTC"
                 )
             else:
                 tg(f"🚨 DANGER EXIT失敗: {coin}\n3回試行しても決済できません\n手動でHL確認してください")
