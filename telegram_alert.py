@@ -232,7 +232,6 @@ def build_message(rows, now_str, hl_positions=None, mexc_positions=None):
     pos_lines = build_position_section(hl_positions or [], mexc_positions or [])
     lines.extend(pos_lines)
 
-    lines.append("※投資助言ではありません")
     return "\n".join(lines)
 
 
