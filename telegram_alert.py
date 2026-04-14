@@ -205,7 +205,7 @@ def build_message(rows, now_str, hl_positions=None, mexc_positions=None):
                     entry_candidates.append((r["coin"], r["rate"], "SHORT"))
             else:
                 tag = ""
-            lines.append(f"  {r['coin']}  <code>{pct(r['rate'])}</code>/h  (8h: {pct(r['rate']*8)}){tag}")
+            lines.append(f"  {r['coin']}  <code>{pct(r['rate'])}</code>/h{tag}")
         lines.append("")
 
     top_short = sorted_short[:3]
@@ -220,7 +220,7 @@ def build_message(rows, now_str, hl_positions=None, mexc_positions=None):
                     entry_candidates.append((r["coin"], r["rate"], "LONG"))
             else:
                 tag = ""
-            lines.append(f"  {r['coin']}  <code>{pct(r['rate'])}</code>/h  (8h: {pct(r['rate']*8)}){tag}")
+            lines.append(f"  {r['coin']}  <code>{pct(r['rate'])}</code>/h{tag}")
         lines.append("")
 
     if entry_candidates:
