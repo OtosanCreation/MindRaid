@@ -61,12 +61,23 @@ def fetch_mexc_positions(api_key: str, api_secret: str) -> list:
             contracts = float(pos.get("contracts") or 0)
             if contracts == 0:
                 continue
+            entry_px  = float(pos.get("entryPrice") or 0)
+            mark_px   = float(pos.get("markPrice") or 0)
+            cont_size = float(pos.get("contractSize") or 1)
+            side      = pos.get("side", "").upper()
+            pnl       = float(pos.get("unrealizedPnl") or 0)
+            # ccxtがPNLを返さない場合、手動計算
+            if pnl == 0 and entry_px > 0 and mark_px > 0:
+                if side == "LONG":
+                    pnl = (mark_px - entry_px) * contracts * cont_size
+                elif side == "SHORT":
+                    pnl = (entry_px - mark_px) * contracts * cont_size
             result.append({
                 "coin":          pos["symbol"].split("/")[0],
-                "side":          pos.get("side", "").upper(),
+                "side":          side,
                 "contracts":     contracts,
-                "entry_price":   float(pos.get("entryPrice") or 0),
-                "unrealized_pnl": float(pos.get("unrealizedPnl") or 0),
+                "entry_price":   entry_px,
+                "unrealized_pnl": pnl,
             })
         return result
     except Exception as e:
