@@ -435,6 +435,10 @@ def main():
                 )
             else:
                 tg(f"🚨 DANGER EXIT失敗: {coin}\n3回試行しても決済できません\n手動でHL確認してください")
+                send_gmail(
+                    subject=f"[MindRaid] 🚨 DANGER EXIT FAILED: {coin}",
+                    body=f"危険ポジション（HL裸）の決済が失敗しました。手動でHL確認・決済してください。\n\n銘柄: {coin}\n時刻: {ts} UTC"
+                )
             continue
 
         # ── 通常ポジション：決済判断 ──────────────────────────
@@ -475,6 +479,12 @@ def main():
             tg(f"🧹 ゴーストポジション削除: {coin}\nHL/MEXC両方にポジションなし\nstate.jsonをクリーンアップしました")
             continue
 
+        # 片側のみポジションなし → 手動決済された可能性を通知
+        if hl_has_pos and not mexc_has_pos:
+            tg(f"⚠️ {coin}: MEXC側ポジションなし（手動決済？）\nHL側のみ決済を試行します")
+        elif not hl_has_pos and mexc_has_pos:
+            tg(f"⚠️ {coin}: HL側ポジションなし（手動決済？）\nMEXC側のみ決済を試行します")
+
         # HL決済
         hl_ok = False
         if not hl_has_pos:
@@ -507,6 +517,10 @@ def main():
                     hl_ok = True
                 except Exception as fe:
                     tg(f"⚠️ EXIT HL ERROR: {coin}\n3回失敗 + 強制決済も失敗\n手動確認してください")
+                    send_gmail(
+                        subject=f"[MindRaid] ⚠️ EXIT HL FAILED: {coin}",
+                        body=f"HL決済が完全に失敗しました。手動で確認・決済してください。\n\n銘柄: {coin}\n時刻: {ts} UTC\nエラー: {fe}"
+                    )
                     print(f"  HL force close失敗: {fe}")
 
         # MEXC決済
@@ -542,6 +556,10 @@ def main():
                     mexc_ok = True
                 except Exception as mfe:
                     tg(f"⚠️ EXIT MEXC ERROR: {coin}\n3回失敗 + 強制決済も失敗\n手動確認してください")
+                    send_gmail(
+                        subject=f"[MindRaid] ⚠️ EXIT MEXC FAILED: {coin}",
+                        body=f"MEXC決済が完全に失敗しました。手動で確認・決済してください。\n\n銘柄: {coin}\n時刻: {ts} UTC\nエラー: {mfe}"
+                    )
                     print(f"  MEXC force close失敗: {mfe}")
 
         if hl_ok and mexc_ok:
@@ -681,6 +699,12 @@ def main():
             f"Size: ${TRADE_SIZE_USD}\n"
             f"HL @ {hl_res['entry_price']:.6f}  ({hl_res['size_coin']} coins)\n"
             f"MEXC @ {mx_res['entry_price']:.6f}  ({mx_res['contracts']} contracts)"
+        )
+        post_x(
+            f"🟢 FR Arb エントリー #{coin}\n"
+            f"方向: {side_label}\n"
+            f"FR: {avg_fr_raw:.4%}/h\n"
+            f"#MindRaid #FRArb #仮想通貨 #ClaudeCode"
         )
         send_gmail(
             subject=f"[MindRaid] ENTRY: {coin}  {side_label}",
