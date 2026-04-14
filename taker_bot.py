@@ -304,6 +304,25 @@ def mexc_close_short(mexc: ccxt.mexc, coin: str, contracts: int) -> dict:
     return {"close_price": avg_price}
 
 
+def get_mexc_open_coins(mexc: ccxt.mexc) -> set:
+    """MEXCで実際に開いているポジションのコイン名セットを返す"""
+    try:
+        positions = mexc.fetch_positions()
+        result = set()
+        for p in positions:
+            contracts = float(p.get("contracts") or 0)
+            if contracts > 0:
+                # symbol = "XXX/USDT:USDT" → coin = "XXX"
+                sym = p.get("symbol", "")
+                coin_name = sym.split("/")[0] if "/" in sym else sym
+                if coin_name:
+                    result.add(coin_name)
+        return result
+    except Exception as e:
+        print(f"[WARN] MEXC実ポジション取得失敗: {e}")
+        return set()
+
+
 def mexc_force_close(mexc: ccxt.mexc, coin: str, direction: str) -> dict:
     """mexc close失敗時のフォールバック: fetch_positionsから実サイズを取得してクローズ"""
     symbol    = f"{coin}/USDT:USDT"
@@ -370,6 +389,15 @@ def main():
 
             print(f"[DANGER EXIT] {coin}  FR={current_fr*100:.4f}%/h < {EXIT_FR_1H*100:.4f}% → HL決済試行")
             direction = pos.get("direction", "short_fr")
+
+            # HL実ポジション事前チェック
+            if coin not in hl_open_coins:
+                print(f"  HL {coin}: ポジションなし → stateから削除")
+                del positions[coin]
+                save_state(state)
+                tg(f"🧹 DANGERゴースト削除: {coin}\nHLにポジションなし\nstate.jsonをクリーンアップしました")
+                continue
+
             hl_ok = False
             for attempt in range(1, 4):
                 try:
@@ -434,66 +462,87 @@ def main():
         direction  = pos.get("direction", "short_fr")
         side_label = "HL SHORT × MEXC LONG" if direction == "short_fr" else "HL LONG × MEXC SHORT"
 
-        # HL決済（リトライ×3）
+        # ── 実ポジション事前チェック ──
+        hl_has_pos   = coin in hl_open_coins
+        mexc_coins   = get_mexc_open_coins(mexc)
+        mexc_has_pos = coin in mexc_coins
+
+        # 両方ともポジションなし → state.jsonのゴースト → 掃除して終了
+        if not hl_has_pos and not mexc_has_pos:
+            print(f"  {coin}: HL/MEXC両方ポジションなし → stateから削除")
+            del positions[coin]
+            save_state(state)
+            tg(f"🧹 ゴーストポジション削除: {coin}\nHL/MEXC両方にポジションなし\nstate.jsonをクリーンアップしました")
+            continue
+
+        # HL決済
         hl_ok = False
-        for attempt in range(1, 4):
-            try:
-                if direction == "short_fr":
-                    hl_close_short(exchange, coin)
-                else:
-                    hl_close_long(exchange, coin)
-                hl_ok = True
-                break
-            except Exception as e:
-                print(f"  HL close attempt {attempt}/3: {e}")
-                open_coins = get_hl_open_coins(info, wallet.address)
-                if coin not in open_coins:
-                    print(f"  HL {coin} ポジション消滅確認 → 決済済みとみなす")
+        if not hl_has_pos:
+            print(f"  HL {coin}: ポジションなし → スキップ")
+            hl_ok = True
+        else:
+            for attempt in range(1, 4):
+                try:
+                    if direction == "short_fr":
+                        hl_close_short(exchange, coin)
+                    else:
+                        hl_close_long(exchange, coin)
                     hl_ok = True
                     break
-                if attempt < 3:
-                    time.sleep(2)
-        # 3回失敗 → force_closeを最終手段として試行
-        if not hl_ok:
-            try:
-                hl_force_close(exchange, info, coin, wallet.address, sz_decimals_map)
-                print(f"  HL force close成功")
-                tg(f"⚠️ HL 強制決済実行: {coin}\nmarket_close 3回失敗のためIOC指値注文で強制クローズしました")
-                hl_ok = True
-            except Exception as fe:
-                tg(f"⚠️ EXIT HL ERROR: {coin}\n3回失敗 + 強制決済も失敗\n手動確認してください")
-                print(f"  HL force close失敗: {fe}")
+                except Exception as e:
+                    print(f"  HL close attempt {attempt}/3: {e}")
+                    open_coins = get_hl_open_coins(info, wallet.address)
+                    if coin not in open_coins:
+                        print(f"  HL {coin} ポジション消滅確認 → 決済済みとみなす")
+                        hl_ok = True
+                        break
+                    if attempt < 3:
+                        time.sleep(2)
+            # 3回失敗 → force_closeを最終手段として試行
+            if not hl_ok:
+                try:
+                    hl_force_close(exchange, info, coin, wallet.address, sz_decimals_map)
+                    print(f"  HL force close成功")
+                    tg(f"⚠️ HL 強制決済実行: {coin}\nmarket_close 3回失敗のためIOC指値注文で強制クローズしました")
+                    hl_ok = True
+                except Exception as fe:
+                    tg(f"⚠️ EXIT HL ERROR: {coin}\n3回失敗 + 強制決済も失敗\n手動確認してください")
+                    print(f"  HL force close失敗: {fe}")
 
-        # MEXC決済（リトライ×3）
+        # MEXC決済
         mexc_ok = False
-        for attempt in range(1, 4):
-            try:
-                if direction == "short_fr":
-                    mexc_close_long(mexc, coin, int(pos["mexc_contracts"]))
-                else:
-                    mexc_close_short(mexc, coin, int(pos["mexc_contracts"]))
-                mexc_ok = True
-                break
-            except Exception as e:
-                err_str = str(e)
-                print(f"  MEXC close attempt {attempt}/3: {err_str}")
-                # すでに決済済み（ポジションなし）は成功とみなす
-                if "nonexistent or closed" in err_str or "Position is nonexistent" in err_str:
-                    print(f"  MEXC {coin} ポジションなし確認 → 決済済みとみなす")
+        if not mexc_has_pos:
+            print(f"  MEXC {coin}: ポジションなし → スキップ")
+            mexc_ok = True
+        else:
+            for attempt in range(1, 4):
+                try:
+                    if direction == "short_fr":
+                        mexc_close_long(mexc, coin, int(pos["mexc_contracts"]))
+                    else:
+                        mexc_close_short(mexc, coin, int(pos["mexc_contracts"]))
                     mexc_ok = True
                     break
-                if attempt < 3:
-                    time.sleep(2)
-        # 3回失敗 → force_closeを最終手段として試行
-        if not mexc_ok:
-            try:
-                mexc_force_close(mexc, coin, direction)
-                print(f"  MEXC force close成功")
-                tg(f"⚠️ MEXC 強制決済実行: {coin}\n通常クローズ 3回失敗のため実ポジション取得して強制クローズしました")
-                mexc_ok = True
-            except Exception as mfe:
-                tg(f"⚠️ EXIT MEXC ERROR: {coin}\n3回失敗 + 強制決済も失敗\n手動確認してください")
-                print(f"  MEXC force close失敗: {mfe}")
+                except Exception as e:
+                    err_str = str(e)
+                    print(f"  MEXC close attempt {attempt}/3: {err_str}")
+                    # すでに決済済み（ポジションなし）は成功とみなす
+                    if "nonexistent or closed" in err_str or "Position is nonexistent" in err_str:
+                        print(f"  MEXC {coin} ポジションなし確認 → 決済済みとみなす")
+                        mexc_ok = True
+                        break
+                    if attempt < 3:
+                        time.sleep(2)
+            # 3回失敗 → force_closeを最終手段として試行
+            if not mexc_ok:
+                try:
+                    mexc_force_close(mexc, coin, direction)
+                    print(f"  MEXC force close成功")
+                    tg(f"⚠️ MEXC 強制決済実行: {coin}\n通常クローズ 3回失敗のため実ポジション取得して強制クローズしました")
+                    mexc_ok = True
+                except Exception as mfe:
+                    tg(f"⚠️ EXIT MEXC ERROR: {coin}\n3回失敗 + 強制決済も失敗\n手動確認してください")
+                    print(f"  MEXC force close失敗: {mfe}")
 
         if hl_ok and mexc_ok:
             est_fr   = est_fr_now
