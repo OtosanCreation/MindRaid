@@ -606,8 +606,8 @@ def main():
         if len(rows) < 2:
             continue
 
-        # 直近2回ともtaker_ok=True かつ FR閾値超え
-        if not all(r["taker"] for r in rows):
+        # 直近2回とも個別にFR閾値超え かつ 平均FR閾値超え
+        if not all(abs(r["fr"]) >= MIN_FR_1H for r in rows):
             continue
         avg_fr_raw = sum(r["fr"] for r in rows) / len(rows)
         avg_fr     = abs(avg_fr_raw)

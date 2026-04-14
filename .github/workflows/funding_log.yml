@@ -63,4 +63,5 @@ jobs:
           git add data/funding_log.csv data/mexc_funding_log.csv images/dashboard.png
           [ -f data/taker_state.json ] && git add data/taker_state.json || true
           git diff --staged --quiet || git commit -m "log: funding $(date -u '+%Y-%m-%d %H:%M UTC')"
+          git pull --rebase origin main || true
           git push
