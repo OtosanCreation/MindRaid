@@ -1,3 +1,15 @@
 {
-  "positions": {}
+  "positions": {
+    "YZY": {
+      "direction": "short_fr",
+      "opened_at": "2026-04-15 00:01:55",
+      "fr_at_entry": 0.0012299081,
+      "size_usd": 90.0,
+      "hl_size_coin": 300.0,
+      "hl_entry_price": 0.30013,
+      "mexc_contracts": 296,
+      "mexc_contract_size": 1.0,
+      "mexc_entry_price": 0.3042
+    }
+  }
 }
