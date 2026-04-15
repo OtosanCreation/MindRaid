@@ -30,16 +30,6 @@ jobs:
       - name: Generate dashboard image
         run: python generate_image.py
 
-      - name: Send Telegram alert
-        continue-on-error: true
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          HL_WALLET_ADDRESS: ${{ secrets.HL_WALLET_ADDRESS }}
-          MEXC_API_KEY: ${{ secrets.MEXC_API_KEY }}
-          MEXC_API_SECRET: ${{ secrets.MEXC_API_SECRET }}
-        run: python telegram_alert.py
-
       - name: Run taker bot
         continue-on-error: true
         env:
@@ -55,6 +45,16 @@ jobs:
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
         run: python taker_bot.py
+
+      - name: Send Telegram alert
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          HL_WALLET_ADDRESS: ${{ secrets.HL_WALLET_ADDRESS }}
+          MEXC_API_KEY: ${{ secrets.MEXC_API_KEY }}
+          MEXC_API_SECRET: ${{ secrets.MEXC_API_SECRET }}
+        run: python telegram_alert.py
 
       - name: Commit and push
         run: |
