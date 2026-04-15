@@ -137,6 +137,11 @@
         <li class="done-task"><span class="icon">✓</span>実戦トライアル：バグ4種修正（double-entry / USDC→USDT / szDecimals / dangerポジション）</li>
         <li class="done-task"><span class="icon">✓</span>HL × MEXC 両脚エントリー・自動決済ロジック確認済み</li>
         <li class="done-task"><span class="icon">✓</span>Telegram通知にリアルタイムポジション表示（PNL付き）</li>
+        <li class="done-task"><span class="icon">✓</span>ゴーストポジション自動検知・クリーンアップ（実ポジション事前チェック）</li>
+        <li class="done-task"><span class="icon">✓</span>HL force close フォールバック（market_close失敗時 → IOC指値注文）</li>
+        <li class="done-task"><span class="icon">✓</span>MEXC PNL手動計算フォールバック（ccxt不具合対応）</li>
+        <li class="done-task"><span class="icon">✓</span>エントリー判定をCSV taker_okからFR値直接比較に修正</li>
+        <li class="done-task"><span class="icon">✓</span>GitHub Actions push競合修正（pull --rebase追加）</li>
         <li class="active-task"><span class="icon">▸</span>taker_bot 本番稼働中（$90/ポジション × 最大2）</li>
         <li class="active-task"><span class="icon">▸</span>全229銘柄FRデータ蓄積中（30分ごと）</li>
         <li class="todo"><span class="icon">▸</span>1ヶ月後：銘柄別FR特性分析 → サイジング最適化</li>
@@ -145,8 +150,8 @@
         <li class="todo"><span class="icon">▸</span>X 発信継続（実トレード実績の公開）</li>
       </ul>
       <div class="profit-box">
-        <div class="label">Phase 4 実績（2026-04-14時点）</div>
-        <div class="value">HL PNL 30D: +$39.12 / 両脚エントリー確認済み / 30分自動スキャン稼働</div>
+        <div class="label">Phase 4 実績（2026-04-15時点）</div>
+        <div class="value">両脚エントリー確認済み / 30分自動スキャン稼働 / 決済フォールバック実装済み</div>
       </div>
     </div>
   </div>

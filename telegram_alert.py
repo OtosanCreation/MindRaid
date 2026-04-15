@@ -55,25 +55,44 @@ def fetch_mexc_positions(api_key: str, api_secret: str) -> list:
             "secret": api_secret,
             "options": {"defaultType": "swap"},
         })
+        mexc.load_markets()
         positions = mexc.fetch_positions()
         result = []
         for pos in positions:
             contracts = float(pos.get("contracts") or 0)
             if contracts == 0:
                 continue
+            symbol    = pos["symbol"]
+            coin      = symbol.split("/")[0]
             entry_px  = float(pos.get("entryPrice") or 0)
-            mark_px   = float(pos.get("markPrice") or 0)
-            cont_size = float(pos.get("contractSize") or 1)
             side      = pos.get("side", "").upper()
-            pnl       = float(pos.get("unrealizedPnl") or 0)
-            # ccxtがPNLを返さない場合、手動計算
-            if pnl == 0 and entry_px > 0 and mark_px > 0:
+            # contract_size を market info から取得（posの値は信頼しない）
+            try:
+                market    = mexc.market(symbol)
+                cont_size = float(market.get("contractSize") or 1)
+            except Exception:
+                cont_size = float(pos.get("contractSize") or 1)
+            # mark_pxを取得（posの値がNullならtickerから）
+            mark_px = float(pos.get("markPrice") or 0)
+            if mark_px == 0:
+                try:
+                    ticker = mexc.fetch_ticker(symbol)
+                    mark_px = float(ticker.get("last") or ticker.get("close") or 0)
+                except Exception as te:
+                    print(f"[WARN] MEXC {coin} ticker取得失敗: {te}")
+            # PNLを常に手動計算（ccxtのunrealizedPnlは信頼しない）
+            if entry_px > 0 and mark_px > 0:
                 if side == "LONG":
                     pnl = (mark_px - entry_px) * contracts * cont_size
                 elif side == "SHORT":
                     pnl = (entry_px - mark_px) * contracts * cont_size
+                else:
+                    pnl = float(pos.get("unrealizedPnl") or 0)
+            else:
+                pnl = float(pos.get("unrealizedPnl") or 0)
+                print(f"[WARN] MEXC {coin} PNL計算不可: entry={entry_px} mark={mark_px}")
             result.append({
-                "coin":          pos["symbol"].split("/")[0],
+                "coin":          coin,
                 "side":          side,
                 "contracts":     contracts,
                 "entry_price":   entry_px,
@@ -83,6 +102,45 @@ def fetch_mexc_positions(api_key: str, api_secret: str) -> list:
     except Exception as e:
         print(f"[WARN] MEXC実ポジション取得失敗: {e}")
         return []
+
+
+PNL_SNAPSHOT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "pnl_snapshot.json")
+
+
+def load_pnl_snapshot() -> dict:
+    try:
+        if os.path.exists(PNL_SNAPSHOT_PATH):
+            with open(PNL_SNAPSHOT_PATH) as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return {}
+
+
+def save_pnl_snapshot(snap: dict) -> None:
+    try:
+        os.makedirs(os.path.dirname(PNL_SNAPSHOT_PATH), exist_ok=True)
+        with open(PNL_SNAPSHOT_PATH, "w") as f:
+            json.dump(snap, f)
+    except Exception as e:
+        print(f"[WARN] PNLスナップショット保存失敗: {e}")
+
+
+def check_stuck_pnl(mexc_positions: list) -> list:
+    """前回と完全一致するPNLを検知して警告を返す"""
+    prev = load_pnl_snapshot()
+    warnings = []
+    current = {}
+    for p in mexc_positions:
+        key = f"MEXC:{p['coin']}:{p['side']}"
+        pnl_val = round(float(p.get("unrealized_pnl", 0)), 4)
+        current[key] = pnl_val
+        if key in prev and prev[key] == pnl_val and pnl_val != 0:
+            warnings.append(f"⚠️ {p['coin']} のPNLが前回と完全一致（${pnl_val:.2f}）— 計算固着の疑い")
+        elif key in prev and pnl_val == 0:
+            warnings.append(f"⚠️ {p['coin']} のPNLが $0.00 — 計算失敗の可能性")
+    save_pnl_snapshot(current)
+    return warnings
 
 
 def build_position_section(hl_positions: list, mexc_positions: list) -> list:
@@ -231,6 +289,11 @@ def build_message(rows, now_str, hl_positions=None, mexc_positions=None):
 
     pos_lines = build_position_section(hl_positions or [], mexc_positions or [])
     lines.extend(pos_lines)
+
+    stuck_warnings = check_stuck_pnl(mexc_positions or [])
+    if stuck_warnings:
+        lines.extend(stuck_warnings)
+        lines.append("")
 
     return "\n".join(lines)
 
