@@ -679,16 +679,36 @@ def main():
         except Exception as e:
             print(f"  MEXC open error → HL rollback: {e}")
             tg(f"⚠️ ENTRY MEXC ERROR: {coin}\n{e}\nHL rollback中...")
+            hl_rb_ok = False
             try:
                 if direction == "short_fr":
                     hl_close_short(exchange, coin)
                 else:
                     hl_close_long(exchange, coin)
-                tg(f"  HL rollback完了")
+                hl_rb_ok = True
             except Exception as re:
-                tg(f"  HL rollback失敗: {re}")
-                positions[coin] = {"status": "danger", "opened_at": ts, "reason": str(re)}
+                print(f"  HL rollback例外: {re}")
+                try:
+                    hl_force_close(exchange, info, coin, wallet.address, sz_decimals_map)
+                    hl_rb_ok = True
+                except Exception as fe:
+                    print(f"  HL force rollback失敗: {fe}")
+            # API応答に関わらず実ポジションで確認
+            import time as _time; _time.sleep(2)
+            hl_verify = get_hl_open_coins(info, wallet.address)
+            if hl_verify is not None and coin in hl_verify:
+                hl_rb_ok = False
+                print(f"  [検証失敗] HL {coin} ポジションまだ残存")
+            if hl_rb_ok:
+                tg(f"  HL rollback完了（実ポジション消滅確認）")
+            else:
+                tg(f"  HL rollback失敗: {coin} HL裸ポジション残存")
+                positions[coin] = {"status": "danger", "opened_at": ts, "reason": "mexc_error_hl_rollback_failed"}
                 save_state(state)
+                send_gmail(
+                    subject=f"[MindRaid] 🚨 HL裸ポジション: {coin}",
+                    body=f"MEXC発注失敗後のHLロールバックが失敗。手動でHL確認・決済してください。\n\n銘柄: {coin}\n時刻: {ts} UTC"
+                )
                 tg(f"🚨 危険ポジション記録: {coin}\nHL裸ポジションあり。手動で確認・決済してください")
             continue
 
@@ -737,6 +757,13 @@ def main():
                 mx_rb_ok = True
             except Exception as e:
                 print(f"  MEXC rollback失敗: {e}")
+
+            # API応答に関わらず実ポジションで最終確認
+            import time as _time2; _time2.sleep(2)
+            hl_verify2 = get_hl_open_coins(info, wallet.address)
+            if hl_verify2 is not None and coin in hl_verify2:
+                hl_rb_ok = False
+                print(f"  [スプレッド検証失敗] HL {coin} ポジションまだ残存")
 
             if hl_rb_ok and mx_rb_ok:
                 tg(f"✅ ロールバック完了: {coin}\nエントリー見送りました")
