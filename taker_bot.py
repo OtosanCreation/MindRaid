@@ -153,7 +153,7 @@ def get_hl_open_coins(info: Info, address: str) -> set:
         return result
     except Exception as e:
         print(f"[WARN] HL実ポジション取得失敗: {e}")
-        return set()
+        return None  # API失敗は「不明」として扱う（Noneと空setを区別）
 
 
 def hl_open_short(exchange: Exchange, info: Info, coin: str, size_usd: float,
@@ -320,7 +320,7 @@ def get_mexc_open_coins(mexc: ccxt.mexc) -> set:
         return result
     except Exception as e:
         print(f"[WARN] MEXC実ポジション取得失敗: {e}")
-        return set()
+        return None  # API失敗は「不明」として扱う
 
 
 def mexc_force_close(mexc: ccxt.mexc, coin: str, direction: str) -> dict:
@@ -362,6 +362,14 @@ def main():
 
     sz_decimals_map = get_sz_decimals(info)
     hl_open_coins   = get_hl_open_coins(info, wallet.address)
+    if hl_open_coins is None:
+        print("[ABORT] HL実ポジション取得失敗 → 安全のため全処理スキップ")
+        tg("🚨 taker_bot ABORT: HL実ポジション取得失敗\n削除・エントリーを安全のためスキップしました")
+        send_gmail(
+            subject="[MindRaid] taker_bot ABORT: HL API失敗",
+            body=f"HL実ポジション取得失敗のためスキップ。\n時刻: {ts} UTC"
+        )
+        return
     print(f"HL実ポジション: {hl_open_coins or 'なし'}")
 
     signals = get_latest_signals(n=2)
@@ -469,6 +477,10 @@ def main():
         # ── 実ポジション事前チェック ──
         hl_has_pos   = coin in hl_open_coins
         mexc_coins   = get_mexc_open_coins(mexc)
+        if mexc_coins is None:
+            print(f"  [SKIP] {coin}: MEXC API失敗 → 今回は決済判断スキップ")
+            tg(f"⚠️ {coin} MEXC実ポジション取得失敗\n次のスキャンで再試行します")
+            continue
         mexc_has_pos = coin in mexc_coins
 
         # 両方ともポジションなし → state.jsonのゴースト → 掃除して終了
