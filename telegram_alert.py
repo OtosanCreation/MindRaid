@@ -9,9 +9,11 @@ GitHub Actions から毎時呼び出す想定。
 """
 
 import os
+import csv
 import urllib.request
 import urllib.parse
 import json
+from collections import defaultdict
 from datetime import datetime, timezone
 from hyperliquid.info import Info
 import ccxt
@@ -185,6 +187,9 @@ def build_position_section(hl_positions: list, mexc_positions: list) -> list:
 TAKER_RT  = 0.00035 * 2   # 0.070%
 MAKER_RT  = 0.00010 * 2   # 0.020%
 ENTRY_FR  = 0.0010         # エントリー閾値: 0.10%/h（taker_bot.pyと同値）
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+HL_FUNDING_CSV = os.path.join(DATA_DIR, "funding_log.csv")
+MEXC_FUNDING_CSV = os.path.join(DATA_DIR, "mexc_funding_log.csv")
 
 
 def load_env():
@@ -216,6 +221,62 @@ def fetch_data(info: Info):
     return rows
 
 
+def load_latest_net_rates() -> dict:
+    """
+    CSVから coin ごとの最新共通timestampのFRを読み、net FR/h を返す。
+    net_short_1h = hl_fr_1h - mexc_fr_1h
+    net_long_1h  = mexc_fr_1h - hl_fr_1h
+    """
+    if not os.path.exists(HL_FUNDING_CSV) or not os.path.exists(MEXC_FUNDING_CSV):
+        return {}
+
+    hl = defaultdict(dict)
+    mx = defaultdict(dict)
+
+    with open(HL_FUNDING_CSV) as f:
+        for row in csv.DictReader(f):
+            coin = row.get("coin", "")
+            ts = row.get("timestamp_utc", "")
+            if not coin or not ts:
+                continue
+            try:
+                hl[coin][ts] = float(row["funding_rate_1h"])
+            except Exception:
+                continue
+
+    with open(MEXC_FUNDING_CSV) as f:
+        for row in csv.DictReader(f):
+            coin = row.get("coin", "")
+            ts = row.get("timestamp_utc", "")
+            if not coin or not ts:
+                continue
+            try:
+                mx[coin][ts] = float(row["funding_rate_1h"])
+            except Exception:
+                continue
+
+    out = {}
+    for coin, hl_by_ts in hl.items():
+        mx_by_ts = mx.get(coin, {})
+        if not mx_by_ts:
+            continue
+        common_ts = sorted(set(hl_by_ts.keys()) & set(mx_by_ts.keys()))
+        if not common_ts:
+            continue
+        ts = common_ts[-1]
+        hl_rate = hl_by_ts[ts]
+        mx_rate = mx_by_ts[ts]
+        short_net = hl_rate - mx_rate
+        out[coin] = {
+            "ts": ts,
+            "hl_fr_1h": hl_rate,
+            "mexc_fr_1h": mx_rate,
+            "net_short_1h": short_net,
+            "net_long_1h": -short_net,
+        }
+    return out
+
+
 def send_message(token, chat_id, text):
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     data = urllib.parse.urlencode({
@@ -228,10 +289,11 @@ def send_message(token, chat_id, text):
         return json.loads(resp.read())
 
 
-def build_message(rows, now_str, hl_positions=None, mexc_positions=None):
+def build_message(rows, now_str, hl_positions=None, mexc_positions=None, net_rates=None):
     sorted_long  = sorted([r for r in rows if r["rate"] < 0], key=lambda r: r["rate"])
     sorted_short = sorted([r for r in rows if r["rate"] > 0], key=lambda r: r["rate"], reverse=True)
     maker_total = sum(1 for r in rows if abs(r["rate"]) > MAKER_RT)
+    net_rates = net_rates or {}
 
     def pct(v):
         sign = "+" if v >= 0 else ""
@@ -242,12 +304,13 @@ def build_message(rows, now_str, hl_positions=None, mexc_positions=None):
 
     lines = [
         f"<b>⚡ MindRaid Alert</b>  {now_str} UTC",
-        f"Hyperliquid {len(rows)}銘柄 | MAKER超え: {maker_total}銘柄 | エントリー閾値: {ENTRY_FR*100:.2f}%/h",
+        f"Hyperliquid {len(rows)}銘柄 | MAKER超え: {maker_total}銘柄 | "
+        f"エントリー判定: net FR (HL-MEXC) ≥ {ENTRY_FR*100:.2f}%/h",
         "",
     ]
 
     # 既存ポジションの銘柄セット（エントリー予定から除外するため）
-    open_coins = {p["coin"] for p in (hl_positions or [])}
+    open_coins = {p["coin"] for p in (hl_positions or [])} | {p["coin"] for p in (mexc_positions or [])}
 
     entry_candidates = []
 
@@ -255,36 +318,82 @@ def build_message(rows, now_str, hl_positions=None, mexc_positions=None):
     if top_long:
         lines.append("🟢 <b>HL SHORT機会 TOP3</b>（FR ネガティブ）")
         for r in top_long:
-            if abs(r["rate"]) >= ENTRY_FR:
-                if r["coin"] in open_coins:
+            coin = r["coin"]
+            net = net_rates.get(coin)
+            if net:
+                short_net = float(net["net_short_1h"])
+                long_net = float(net["net_long_1h"])
+                best_side = "SHORT" if short_net >= long_net else "LONG"
+                best_net = max(short_net, long_net)
+                net_txt = (
+                    f" net短:<code>{pct(short_net)}</code>/h"
+                    f" net長:<code>{pct(long_net)}</code>/h"
+                )
+                if coin in open_coins:
                     tag = " ⚡保有中"
+                elif best_net >= ENTRY_FR:
+                    tag = f" ⚡netエントリー圏(HL {best_side})"
                 else:
-                    tag = " ⚡エントリー圏"
-                    entry_candidates.append((r["coin"], r["rate"], "SHORT"))
+                    tag = " ⚪net不足"
             else:
-                tag = ""
-            lines.append(f"  {r['coin']}  <code>{pct(r['rate'])}</code>/h{tag}")
+                net_txt = " net: <code>N/A</code>"
+                tag = " ⚪net不明"
+            lines.append(f"  {coin}  <code>{pct(r['rate'])}</code>/h |{net_txt}{tag}")
         lines.append("")
 
     top_short = sorted_short[:3]
     if top_short:
         lines.append("🔴 <b>HL LONG機会 TOP3</b>（FR ポジティブ）")
         for r in top_short:
-            if r["rate"] >= ENTRY_FR:
-                if r["coin"] in open_coins:
+            coin = r["coin"]
+            net = net_rates.get(coin)
+            if net:
+                short_net = float(net["net_short_1h"])
+                long_net = float(net["net_long_1h"])
+                best_side = "SHORT" if short_net >= long_net else "LONG"
+                best_net = max(short_net, long_net)
+                net_txt = (
+                    f" net短:<code>{pct(short_net)}</code>/h"
+                    f" net長:<code>{pct(long_net)}</code>/h"
+                )
+                if coin in open_coins:
                     tag = " ⚡保有中"
+                elif best_net >= ENTRY_FR:
+                    tag = f" ⚡netエントリー圏(HL {best_side})"
                 else:
-                    tag = " ⚡エントリー圏"
-                    entry_candidates.append((r["coin"], r["rate"], "LONG"))
+                    tag = " ⚪net不足"
             else:
-                tag = ""
-            lines.append(f"  {r['coin']}  <code>{pct(r['rate'])}</code>/h{tag}")
+                net_txt = " net: <code>N/A</code>"
+                tag = " ⚪net不明"
+            lines.append(f"  {coin}  <code>{pct(r['rate'])}</code>/h |{net_txt}{tag}")
         lines.append("")
 
+    # 次スキャンで継続なら候補（実際のtaker_botと同じく net FR 優位側で判定）
+    for r in rows:
+        coin = r["coin"]
+        if coin in open_coins:
+            continue
+        net = net_rates.get(coin)
+        if not net:
+            continue
+        short_net = float(net["net_short_1h"])
+        long_net = float(net["net_long_1h"])
+        best_side = "SHORT" if short_net >= long_net else "LONG"
+        best_net = max(short_net, long_net)
+        if best_net >= ENTRY_FR:
+            entry_candidates.append((coin, best_side, best_net, short_net, long_net))
+
+    entry_candidates.sort(key=lambda x: x[2], reverse=True)
     if entry_candidates:
         lines.append("🎯 <b>次のスキャンで継続ならエントリー予定</b>")
-        for coin, rate, side in entry_candidates:
-            lines.append(f"  → {coin}  HL {side}  {pct(rate)}/h")
+        for coin, side, best_net, short_net, long_net in entry_candidates[:5]:
+            lines.append(
+                f"  → {coin}  HL {side}  net:<code>{pct(best_net)}</code>/h"
+                f" (short:<code>{pct(short_net)}</code> / long:<code>{pct(long_net)}</code>)"
+            )
+        lines.append("")
+    else:
+        lines.append("ℹ️ <b>net FR基準のエントリー候補なし</b>")
         lines.append("")
 
     pos_lines = build_position_section(hl_positions or [], mexc_positions or [])
@@ -307,6 +416,7 @@ def main():
     print("Fetching funding data …")
     info = Info(skip_ws=True)
     rows = fetch_data(info)
+    net_rates = load_latest_net_rates()
 
     hl_address    = os.environ.get("HL_WALLET_ADDRESS", "")
     mexc_api_key  = os.environ.get("MEXC_API_KEY", "")
@@ -314,7 +424,13 @@ def main():
     hl_positions   = fetch_hl_positions(hl_address)
     mexc_positions = fetch_mexc_positions(mexc_api_key, mexc_api_sec)
 
-    msg = build_message(rows, now_str, hl_positions=hl_positions, mexc_positions=mexc_positions)
+    msg = build_message(
+        rows,
+        now_str,
+        hl_positions=hl_positions,
+        mexc_positions=mexc_positions,
+        net_rates=net_rates,
+    )
     print("--- Message preview ---")
     print(msg)
     print("-----------------------")
