@@ -1,9 +1,9 @@
 """
 taker_bot.py
 FR自動売買ボット（双方向対応）
-  - FR < -MIN_FR_1H → HL SHORT + MEXC LONG  (ネガティブFR: LONGが受取)
-  - FR >  MIN_FR_1H → HL LONG  + MEXC SHORT (ポジティブFR: SHORTが受取)
-  - FR が EXIT閾値を下回ったら → 決済
+  - net_short_1h = HL_FR_1h - MEXC_FR_1h
+  - net_long_1h  = MEXC_FR_1h - HL_FR_1h
+  - 優位側の net FR/h が閾値を下回ったら決済
 
 コスト: HL taker 0.035%×2 + MEXC taker 0.04%×2 = 往復0.15%
 """
@@ -30,13 +30,14 @@ from hyperliquid.info import Info
 # ── 設定 ────────────────────────────────────────────────────────
 TRADE_SIZE_USD  = float(os.environ.get("TRADE_SIZE_USD", "90"))   # 1ポジションUSDT
 MAX_POSITIONS   = int(os.environ.get("MAX_POSITIONS", "2"))        # 最大同時ポジション数
-MIN_FR_1H       = 0.0010  # エントリー最小FR閾値: 0.10%/h（トライアルフェーズ、サンプル収集優先）
-EXIT_FR_1H      = 0.0002  # 決済FR閾値: 0.02%/h（MAKERレート相当、コスト回収前）
-EXIT_FR_RECOVERED = 0.0001  # コスト回収済み後の決済閾値: 0.01%/h（最後まで搾り取る）
+MIN_FR_1H       = 0.0010  # エントリー最小 net FR閾値: 0.10%/h（1時間換算）
+EXIT_FR_1H      = 0.0002  # 決済 net FR閾値: 0.02%/h（コスト回収前）
+EXIT_FR_RECOVERED = 0.0001  # コスト回収済み後の決済閾値: 0.01%/h
 MAX_ENTRY_SPREAD = 0.0015   # エントリー時許容スプレッド: 0.15%（不利側。超えたらロールバック）
 
 DATA_DIR     = os.path.join(os.path.dirname(__file__), "data")
 FUNDING_CSV  = os.path.join(DATA_DIR, "funding_log.csv")
+MEXC_FUNDING_CSV = os.path.join(DATA_DIR, "mexc_funding_log.csv")
 STATE_FILE   = os.path.join(DATA_DIR, "taker_state.json")
 
 HL_PRIVATE_KEY  = os.environ["HL_PRIVATE_KEY"]
@@ -114,8 +115,12 @@ def save_state(state: dict):
 
 
 # ── Funding CSV ───────────────────────────────────────────────────
-def get_latest_signals(n: int = 2) -> dict:
-    """各銘柄の直近n回のシグナルを返す {coin: [{'ts','fr','taker'}, ...]}"""
+def get_latest_hl_signals(n: int = 2) -> dict:
+    """HL各銘柄の直近n回のシグナルを返す {coin: [{'ts','fr','taker'}, ...]}"""
+    if not os.path.exists(FUNDING_CSV):
+        print(f"[WARN] funding CSV が見つかりません: {FUNDING_CSV}")
+        return {}
+
     rows_by_coin: dict = defaultdict(list)
     with open(FUNDING_CSV) as f:
         for row in csv.DictReader(f):
@@ -130,6 +135,75 @@ def get_latest_signals(n: int = 2) -> dict:
     for coin, rows in rows_by_coin.items():
         rows.sort(key=lambda x: x["ts"])
         result[coin] = rows[-n:]
+    return result
+
+
+def get_latest_net_signals(n: int = 2) -> dict:
+    """
+    HL/MEXC の直近n回からネットFRシグナルを返す。
+    net_short_1h = HL_SHORT受取 + MEXC_LONG受取 = hl_fr_1h - mexc_fr_1h
+    net_long_1h  = HL_LONG受取  + MEXC_SHORT受取 = mexc_fr_1h - hl_fr_1h
+    """
+    if not os.path.exists(FUNDING_CSV):
+        print(f"[WARN] HL funding CSV が見つかりません: {FUNDING_CSV}")
+        return {}
+    if not os.path.exists(MEXC_FUNDING_CSV):
+        print(f"[WARN] MEXC funding CSV が見つかりません: {MEXC_FUNDING_CSV}")
+        return {}
+
+    hl_rows_by_coin: dict = defaultdict(list)
+    mx_rows_by_coin: dict = defaultdict(list)
+
+    with open(FUNDING_CSV) as f:
+        for row in csv.DictReader(f):
+            coin = row.get("coin", "")
+            ts = row.get("timestamp_utc", "")
+            if not coin or not ts:
+                continue
+            try:
+                hl_rate_1h = float(row["funding_rate_1h"])
+            except Exception:
+                continue
+            hl_rows_by_coin[coin].append({"ts": ts, "hl_fr_1h": hl_rate_1h})
+
+    with open(MEXC_FUNDING_CSV) as f:
+        for row in csv.DictReader(f):
+            coin = row.get("coin", "")
+            ts = row.get("timestamp_utc", "")
+            if not coin or not ts:
+                continue
+            try:
+                mx_rate_1h = float(row["funding_rate_1h"])
+            except Exception:
+                continue
+            mx_rows_by_coin[coin].append({"ts": ts, "mexc_fr_1h": mx_rate_1h})
+
+    result = {}
+    for coin, hl_rows in hl_rows_by_coin.items():
+        mx_rows = mx_rows_by_coin.get(coin, [])
+        if not mx_rows:
+            continue
+
+        hl_by_ts = {r["ts"]: float(r["hl_fr_1h"]) for r in hl_rows}
+        mx_by_ts = {r["ts"]: float(r["mexc_fr_1h"]) for r in mx_rows}
+        common_ts = sorted(set(hl_by_ts.keys()) & set(mx_by_ts.keys()))
+        if not common_ts:
+            continue
+
+        combined = []
+        for ts in common_ts[-n:]:
+            hl_fr_1h = hl_by_ts[ts]
+            mexc_fr_1h = mx_by_ts[ts]
+            net_short = hl_fr_1h - mexc_fr_1h
+            combined.append({
+                "ts": ts,
+                "hl_fr_1h": hl_fr_1h,
+                "mexc_fr_1h": mexc_fr_1h,
+                "net_short_1h": net_short,
+                "net_long_1h": -net_short,
+            })
+        result[coin] = combined
+
     return result
 
 
@@ -260,6 +334,97 @@ def get_mexc() -> ccxt.mexc:
     })
 
 
+def _mexc_coin_from_symbol(symbol: str) -> str:
+    if not symbol:
+        return ""
+    if "/" in symbol:
+        return symbol.split("/")[0]
+    if "_" in symbol:
+        return symbol.split("_")[0]
+    return symbol
+
+
+def _mexc_position_side(pos: dict) -> str:
+    """返り値: 'long' | 'short' | ''"""
+    info = pos.get("info", {}) if isinstance(pos.get("info"), dict) else {}
+    raw = (
+        pos.get("side")
+        or pos.get("positionSide")
+        or info.get("positionSide")
+        or info.get("holdSide")
+        or ""
+    )
+    raw_l = str(raw).lower()
+    if "long" in raw_l or raw_l == "buy":
+        return "long"
+    if "short" in raw_l or raw_l == "sell":
+        return "short"
+    try:
+        c = float(pos.get("contracts") or 0)
+        if c < 0:
+            return "short"
+    except Exception:
+        pass
+    return ""
+
+
+def _mexc_position_contracts(pos: dict) -> float:
+    info = pos.get("info", {}) if isinstance(pos.get("info"), dict) else {}
+    raw = pos.get("contracts")
+    if raw is None:
+        raw = info.get("vol") or info.get("positionQty") or 0
+    try:
+        return abs(float(raw or 0))
+    except Exception:
+        return 0.0
+
+
+def _mexc_position_symbol(pos: dict) -> str:
+    info = pos.get("info", {}) if isinstance(pos.get("info"), dict) else {}
+    sym = pos.get("symbol") or info.get("symbol") or ""
+    return str(sym)
+
+
+def _mexc_create_open_market(mexc: ccxt.mexc, symbol: str, is_buy: bool,
+                             contracts: int, position_side: str):
+    """口座モード差異を吸収して成行オープンを試行する。"""
+    candidates = []
+    if position_side:
+        candidates.append({"positionSide": position_side.upper()})
+        candidates.append({"holdSide": position_side.lower()})
+    candidates.append({})
+
+    last_err = None
+    for params in candidates:
+        try:
+            if is_buy:
+                return mexc.create_market_buy_order(symbol, contracts, params=params)
+            return mexc.create_market_sell_order(symbol, contracts, params=params)
+        except Exception as e:
+            last_err = e
+    raise last_err
+
+
+def _mexc_create_reduce_only_market(mexc: ccxt.mexc, symbol: str, is_buy: bool,
+                                    contracts: int, position_side: str):
+    """口座モード差異を吸収してreduceOnly成行を試行する。"""
+    candidates = []
+    if position_side:
+        candidates.append({"reduceOnly": True, "positionSide": position_side.upper()})
+        candidates.append({"reduceOnly": True, "holdSide": position_side.lower()})
+    candidates.append({"reduceOnly": True})
+
+    last_err = None
+    for params in candidates:
+        try:
+            if is_buy:
+                return mexc.create_market_buy_order(symbol, contracts, params=params)
+            return mexc.create_market_sell_order(symbol, contracts, params=params)
+        except Exception as e:
+            last_err = e
+    raise last_err
+
+
 def mexc_open_long(mexc: ccxt.mexc, coin: str, size_usd: float) -> dict:
     symbol  = f"{coin}/USDT:USDT"
     market  = mexc.market(symbol)
@@ -270,15 +435,15 @@ def mexc_open_long(mexc: ccxt.mexc, coin: str, size_usd: float) -> dict:
     contracts = size_usd / (price * cs)
     # 最小1枚、precision=1（整数）
     contracts = max(1, round(contracts))
-    order = mexc.create_market_buy_order(symbol, contracts)
+    order = _mexc_create_open_market(mexc, symbol, is_buy=True, contracts=contracts, position_side="long")
     avg_price = float(order.get("average") or order.get("price") or price)
     return {"contracts": contracts, "entry_price": avg_price, "contract_size": cs}
 
 
 def mexc_close_long(mexc: ccxt.mexc, coin: str, contracts: int) -> dict:
     symbol = f"{coin}/USDT:USDT"
-    order  = mexc.create_market_sell_order(
-        symbol, contracts, params={"reduceOnly": True}
+    order = _mexc_create_reduce_only_market(
+        mexc, symbol, is_buy=False, contracts=contracts, position_side="long"
     )
     avg_price = float(order.get("average") or order.get("price") or 0)
     return {"close_price": avg_price}
@@ -291,15 +456,15 @@ def mexc_open_short(mexc: ccxt.mexc, coin: str, size_usd: float) -> dict:
     price     = float(ticker["bid"] or ticker["last"])
     cs        = float(market.get("contractSize") or 1)
     contracts = max(1, round(size_usd / (price * cs)))
-    order     = mexc.create_market_sell_order(symbol, contracts)
+    order     = _mexc_create_open_market(mexc, symbol, is_buy=False, contracts=contracts, position_side="short")
     avg_price = float(order.get("average") or order.get("price") or price)
     return {"contracts": contracts, "entry_price": avg_price, "contract_size": cs}
 
 
 def mexc_close_short(mexc: ccxt.mexc, coin: str, contracts: int) -> dict:
     symbol = f"{coin}/USDT:USDT"
-    order  = mexc.create_market_buy_order(
-        symbol, contracts, params={"reduceOnly": True}
+    order = _mexc_create_reduce_only_market(
+        mexc, symbol, is_buy=True, contracts=contracts, position_side="short"
     )
     avg_price = float(order.get("average") or order.get("price") or 0)
     return {"close_price": avg_price}
@@ -311,11 +476,11 @@ def get_mexc_open_coins(mexc: ccxt.mexc) -> set:
         positions = mexc.fetch_positions()
         result = set()
         for p in positions:
-            contracts = float(p.get("contracts") or 0)
+            contracts = _mexc_position_contracts(p)
             if contracts > 0:
-                # symbol = "XXX/USDT:USDT" → coin = "XXX"
-                sym = p.get("symbol", "")
-                coin_name = sym.split("/")[0] if "/" in sym else sym
+                # symbol = "XXX/USDT:USDT" or "XXX_USDT" → coin = "XXX"
+                sym = _mexc_position_symbol(p)
+                coin_name = _mexc_coin_from_symbol(sym)
                 if coin_name:
                     result.add(coin_name)
         return result
@@ -328,21 +493,29 @@ def mexc_force_close(mexc: ccxt.mexc, coin: str, direction: str) -> dict:
     """mexc close失敗時のフォールバック: fetch_positionsから実サイズを取得してクローズ"""
     symbol    = f"{coin}/USDT:USDT"
     positions = mexc.fetch_positions([symbol])
-    pos = next(
-        (p for p in positions
-         if p.get("symbol") == symbol and float(p.get("contracts") or 0) > 0),
-        None
-    )
+    expected_side = "long" if direction == "short_fr" else "short"
+    alt_symbol = symbol.replace("/", "_").replace(":USDT", "")
+    same_symbol = [
+        p for p in positions
+        if _mexc_position_symbol(p) in {symbol, alt_symbol}
+        and _mexc_position_contracts(p) > 0
+    ]
+    if not same_symbol:
+        pos = None
+    else:
+        same_side = [p for p in same_symbol if _mexc_position_side(p) == expected_side]
+        candidates = same_side or same_symbol
+        pos = max(candidates, key=_mexc_position_contracts)
     if pos is None:
         return {"close_price": 0.0}  # すでに決済済み
 
-    contracts = int(float(pos["contracts"]))
-    # short_fr: MEXC LONG を閉じる = SELL
-    # long_fr:  MEXC SHORT を閉じる = BUY
-    if direction == "short_fr":
-        order = mexc.create_market_sell_order(symbol, contracts, params={"reduceOnly": True})
-    else:
-        order = mexc.create_market_buy_order(symbol, contracts, params={"reduceOnly": True})
+    contracts = int(max(1, round(_mexc_position_contracts(pos))))
+    pos_side = _mexc_position_side(pos) or expected_side
+    # LONGを閉じる = SELL, SHORTを閉じる = BUY
+    is_buy = pos_side == "short"
+    order = _mexc_create_reduce_only_market(
+        mexc, symbol, is_buy=is_buy, contracts=contracts, position_side=pos_side
+    )
     avg_price = float(order.get("average") or order.get("price") or 0)
     return {"close_price": avg_price}
 
@@ -373,7 +546,8 @@ def main():
         return
     print(f"HL実ポジション: {hl_open_coins or 'なし'}")
 
-    signals = get_latest_signals(n=2)
+    hl_signals = get_latest_hl_signals(n=2)
+    signals    = get_latest_net_signals(n=2)
 
     # ── 決済チェック（先に行う）────────────────────────────────
     for coin in list(positions.keys()):
@@ -381,7 +555,7 @@ def main():
 
         # ── dangerポジション：FR閾値監視 → 閾値割れでHLのみ決済 ──
         if pos.get("status") == "danger":
-            sig = signals.get(coin, [])
+            sig = hl_signals.get(coin, [])
             if not sig:
                 tg(f"🚨 危険ポジション保有中: {coin}（FRデータなし）\nHL手動確認してください")
                 continue
@@ -419,10 +593,12 @@ def main():
                 except Exception as e:
                     print(f"  HL danger close attempt {attempt}/3: {e}")
                     open_coins = get_hl_open_coins(info, wallet.address)
-                    if coin not in open_coins:
+                    if open_coins is not None and coin not in open_coins:
                         print(f"  HL {coin} ポジション消滅確認 → 決済済みとみなす")
                         hl_ok = True
                         break
+                    if open_coins is None:
+                        print("  HL実ポジション再確認失敗 → この試行では判定保留")
                     if attempt < 3:
                         time.sleep(2)
             # 3回失敗 → force_closeを最終手段として試行
@@ -453,27 +629,40 @@ def main():
         # ── 通常ポジション：決済判断 ──────────────────────────
         sig = signals.get(coin, [])
         if not sig:
+            print(f"[SKIP] {coin} ネットFRデータ不足（HL/MEXC両方の最新データが未取得）")
+            tg(f"⚠️ {coin} ネットFRデータ不足\n今回はEXIT判定をスキップします")
             continue
 
-        current_fr = abs(sig[-1]["fr"])
+        direction  = pos.get("direction", "short_fr")
+        side_label = "HL SHORT × MEXC LONG" if direction == "short_fr" else "HL LONG × MEXC SHORT"
+
+        last_row = sig[-1]
+        current_net_fr = float(last_row["net_short_1h"] if direction == "short_fr" else last_row["net_long_1h"])
+        hl_fr_now      = float(last_row["hl_fr_1h"])
+        mexc_fr_now    = float(last_row["mexc_fr_1h"])
         opened     = datetime.strptime(pos["opened_at"], "%Y-%m-%d %H:%M:%S")
         now_dt     = datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
         dur_h      = (now_dt - opened).total_seconds() / 3600
-        est_fr_now = abs(pos["fr_at_entry"]) * dur_h * pos["size_usd"]
+        entry_net_fr_1h = float(pos.get("entry_net_fr_1h", pos.get("fr_at_entry", 0)))
+        est_fr_now = max(0.0, entry_net_fr_1h) * dur_h * pos["size_usd"]
         cost       = 0.0017 * pos["size_usd"]
         cost_recovered = est_fr_now >= cost
 
         exit_threshold = EXIT_FR_RECOVERED if cost_recovered else EXIT_FR_1H
 
-        if current_fr >= exit_threshold:
-            print(f"[HOLD] {coin}  FR={current_fr*100:.4f}%/h  保有継続"
-                  f"{'（コスト回収済）' if cost_recovered else ''}")
+        if current_net_fr >= exit_threshold:
+            print(
+                f"[HOLD] {coin}  netFR={current_net_fr*100:.4f}%/h  "
+                f"(HL={hl_fr_now*100:+.4f}%/h, MEXC={mexc_fr_now*100:+.4f}%/h) 保有継続"
+                f"{'（コスト回収済）' if cost_recovered else ''}"
+            )
             continue
 
-        print(f"[EXIT] {coin}  FR={current_fr*100:.4f}%/h < {exit_threshold*100:.4f}% → 決済")
-
-        direction  = pos.get("direction", "short_fr")
-        side_label = "HL SHORT × MEXC LONG" if direction == "short_fr" else "HL LONG × MEXC SHORT"
+        print(
+            f"[EXIT] {coin}  netFR={current_net_fr*100:.4f}%/h "
+            f"(HL={hl_fr_now*100:+.4f}%/h, MEXC={mexc_fr_now*100:+.4f}%/h) "
+            f"< {exit_threshold*100:.4f}% → 決済"
+        )
 
         # ── 実ポジション事前チェック ──
         hl_has_pos   = coin in hl_open_coins
@@ -515,10 +704,12 @@ def main():
                 except Exception as e:
                     print(f"  HL close attempt {attempt}/3: {e}")
                     open_coins = get_hl_open_coins(info, wallet.address)
-                    if coin not in open_coins:
+                    if open_coins is not None and coin not in open_coins:
                         print(f"  HL {coin} ポジション消滅確認 → 決済済みとみなす")
                         hl_ok = True
                         break
+                    if open_coins is None:
+                        print("  HL実ポジション再確認失敗 → この試行では判定保留")
                     if attempt < 3:
                         time.sleep(2)
             # 3回失敗 → force_closeを最終手段として試行
@@ -586,6 +777,8 @@ def main():
             tg(
                 f"🔴 EXIT: {coin}\n"
                 f"保有: {dur_h:.1f}h\n"
+                f"現在net FR: {current_net_fr:+.4%}/h\n"
+                f"現在HL FR: {hl_fr_now:+.4%}/h  MEXC FR: {mexc_fr_now:+.4%}/h\n"
                 f"推定FR収益: ${est_fr:.2f}\n"
                 f"手数料: ${est_cost:.2f}\n"
                 f"推定net: ${net:.2f}"
@@ -593,6 +786,7 @@ def main():
             post_x(
                 f"🔴 FR Arb 決済 #{coin}\n"
                 f"保有時間: {dur_h:.1f}h\n"
+                f"現在net FR: {current_net_fr:+.4%}/h\n"
                 f"推定収益: ${est_fr:.2f} / net: ${net:.2f}\n"
                 f"{side_label}\n"
                 f"#MindRaid #FRArb #仮想通貨 #ClaudeCode"
@@ -604,6 +798,9 @@ def main():
                     f"銘柄: {coin}\n"
                     f"方向: {side_label}\n"
                     f"保有時間: {dur_h:.1f}h\n"
+                    f"現在net FR: {current_net_fr:+.4%}/h\n"
+                    f"現在HL FR: {hl_fr_now:+.4%}/h\n"
+                    f"現在MEXC FR: {mexc_fr_now:+.4%}/h\n"
                     f"推定FR収益: ${est_fr:.2f}\n"
                     f"手数料: ${est_cost:.2f}\n"
                     f"推定net: ${net:.2f}\n"
@@ -615,6 +812,7 @@ def main():
             # 片方失敗 → stateは残したまま次スキャンで再試行
             tg(
                 f"⚠️ EXIT 部分失敗: {coin}\n"
+                f"現在net FR: {current_net_fr:+.4%}/h\n"
                 f"HL: {'✅' if hl_ok else '❌'}  MEXC: {'✅' if mexc_ok else '❌'}\n"
                 f"次のスキャンで再試行します"
             )
@@ -637,19 +835,28 @@ def main():
         if len(rows) < 2:
             continue
 
-        # 直近2回とも個別にFR閾値超え かつ 平均FR閾値超え
-        if not all(abs(r["fr"]) >= MIN_FR_1H for r in rows):
+        # 直近2回の「ネットFR/h」で方向を決定
+        avg_short_net_1h = sum(r["net_short_1h"] for r in rows) / len(rows)
+        direction  = "short_fr" if avg_short_net_1h >= 0 else "long_fr"
+        selected_net = [
+            float(r["net_short_1h"] if direction == "short_fr" else r["net_long_1h"])
+            for r in rows
+        ]
+        if not all(v >= MIN_FR_1H for v in selected_net):
             continue
-        avg_fr_raw = sum(r["fr"] for r in rows) / len(rows)
-        avg_fr     = abs(avg_fr_raw)
-        if avg_fr < MIN_FR_1H:
+        avg_net_fr_1h = sum(selected_net) / len(selected_net)
+        if avg_net_fr_1h < MIN_FR_1H:
             continue
 
-        # FR方向で発注サイドを決定
-        direction  = "short_fr" if avg_fr_raw < 0 else "long_fr"
+        avg_hl_fr_1h   = sum(float(r["hl_fr_1h"]) for r in rows) / len(rows)
+        avg_mexc_fr_1h = sum(float(r["mexc_fr_1h"]) for r in rows) / len(rows)
         side_label = "HL SHORT × MEXC LONG" if direction == "short_fr" else "HL LONG × MEXC SHORT"
 
-        print(f"[ENTRY] {coin}  avg_FR={avg_fr_raw:.4%}/h  {side_label}  size=${TRADE_SIZE_USD}")
+        print(
+            f"[ENTRY] {coin}  netFR={avg_net_fr_1h:.4%}/h "
+            f"(HL={avg_hl_fr_1h:+.4%}/h, MEXC={avg_mexc_fr_1h:+.4%}/h)  "
+            f"{side_label}  size=${TRADE_SIZE_USD}"
+        )
 
         # HL レバレッジを1xに設定してから発注
         try:
@@ -791,7 +998,10 @@ def main():
         positions[coin] = {
             "direction":     direction,
             "opened_at":     ts,
-            "fr_at_entry":   avg_fr,
+            "fr_at_entry":   avg_net_fr_1h,  # 互換のため残す（値はnetFR）
+            "entry_net_fr_1h": avg_net_fr_1h,
+            "entry_hl_fr_1h": avg_hl_fr_1h,
+            "entry_mexc_fr_1h": avg_mexc_fr_1h,
             "size_usd":      TRADE_SIZE_USD,
             "hl_size_coin":  hl_res["size_coin"],
             "hl_entry_price": hl_res["entry_price"],
@@ -805,7 +1015,8 @@ def main():
         tg(
             f"🟢 ENTRY: {coin}\n"
             f"方向: {side_label}\n"
-            f"FR: {avg_fr_raw:.4%}/h\n"
+            f"net FR: {avg_net_fr_1h:.4%}/h\n"
+            f"HL FR: {avg_hl_fr_1h:+.4%}/h  MEXC FR: {avg_mexc_fr_1h:+.4%}/h\n"
             f"Size: ${TRADE_SIZE_USD}\n"
             f"HL @ {hl_res['entry_price']:.6f}  ({hl_res['size_coin']} coins)\n"
             f"MEXC @ {mx_res['entry_price']:.6f}  ({mx_res['contracts']} contracts)"
@@ -813,7 +1024,7 @@ def main():
         post_x(
             f"🟢 FR Arb エントリー #{coin}\n"
             f"方向: {side_label}\n"
-            f"FR: {avg_fr_raw:.4%}/h\n"
+            f"net FR: {avg_net_fr_1h:.4%}/h\n"
             f"#MindRaid #FRArb #仮想通貨 #ClaudeCode"
         )
         send_gmail(
@@ -822,7 +1033,9 @@ def main():
                 f"FR Arb エントリー\n\n"
                 f"銘柄: {coin}\n"
                 f"方向: {side_label}\n"
-                f"FR: {avg_fr_raw:.4%}/h\n"
+                f"net FR: {avg_net_fr_1h:.4%}/h\n"
+                f"HL FR: {avg_hl_fr_1h:+.4%}/h\n"
+                f"MEXC FR: {avg_mexc_fr_1h:+.4%}/h\n"
                 f"サイズ: ${TRADE_SIZE_USD}\n"
                 f"HL @ {hl_res['entry_price']:.6f}\n"
                 f"MEXC @ {mx_res['entry_price']:.6f}\n"
