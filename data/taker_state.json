@@ -1,19 +1,3 @@
 {
-  "positions": {
-    "YZY": {
-      "direction": "long_fr",
-      "opened_at": "2026-04-16 00:31:45",
-      "fr_at_entry": 0.0010396706000000001,
-      "entry_net_fr_1h": 0.0010396706000000001,
-      "entry_hl_fr_1h": -0.0010336706000000002,
-      "entry_mexc_fr_1h": 6e-06,
-      "size_usd": 90.0,
-      "hl_size_coin": 296.0,
-      "hl_entry_price": 0.30441,
-      "mexc_contracts": 296,
-      "mexc_contract_size": 1.0,
-      "mexc_entry_price": 0.304,
-      "entry_spread": 0.0013468677113104741
-    }
-  }
+  "positions": {}
 }
