@@ -2,3 +2,5 @@ hyperliquid-python-sdk
 ccxt
 Pillow
 tweepy
+lighter @ git+https://github.com/elliottech/lighter-python.git
+python-dotenv

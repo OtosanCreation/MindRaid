@@ -1,11 +1,14 @@
 """
 taker_bot.py
-FR自動売買ボット（双方向対応）
-  - net_short_1h = HL_FR_1h - MEXC_FR_1h
-  - net_long_1h  = MEXC_FR_1h - HL_FR_1h
+FR自動売買ボット（双方向対応、HL × Lighter / MEXC 両対応）
+  - EXCHANGE_MODE="LIGHTER" で Lighter DEX と ARB（デフォルト）
+  - EXCHANGE_MODE="MEXC" で旧 MEXC フロー（互換用・コメントアウトされていない）
+  - net_short_1h = HL_FR_1h - COUNTER_FR_1h
+  - net_long_1h  = COUNTER_FR_1h - HL_FR_1h
   - 優位側の net FR/h が閾値を下回ったら決済
 
-コスト: HL taker 0.035%×2 + MEXC taker 0.04%×2 = 往復0.15%
+コスト (LIGHTER モード): HL taker 0.035%×2 + Lighter taker 0%×2 = 往復0.07%
+コスト (MEXC モード)   : HL taker 0.035%×2 + MEXC taker 0.04%×2 = 往復0.15%
 """
 
 import csv
@@ -27,22 +30,34 @@ from eth_account import Account
 from hyperliquid.exchange import Exchange
 from hyperliquid.info import Info
 
+# ── .env ロード（ローカル実行用）────────────────────────────────
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 # ── 設定 ────────────────────────────────────────────────────────
+EXCHANGE_MODE   = os.environ.get("EXCHANGE_MODE", "LIGHTER").upper()  # "LIGHTER" or "MEXC"
 TRADE_SIZE_USD  = float(os.environ.get("TRADE_SIZE_USD", "90"))   # 1ポジションUSDT
 MAX_POSITIONS   = int(os.environ.get("MAX_POSITIONS", "2"))        # 最大同時ポジション数
 MIN_FR_1H       = 0.0010  # エントリー最小 net FR閾値: 0.10%/h（1時間換算）
 EXIT_FR_1H      = 0.0002  # 決済 net FR閾値: 0.02%/h（コスト回収前）
 EXIT_FR_RECOVERED = 0.0001  # コスト回収済み後の決済閾値: 0.01%/h
+# MAX_ENTRY_SPREAD: LIGHTER では手数料0のため閾値を小さくしても良いが、
+# 価格スリッページ自体のリスクは同じなので 0.15% を維持
 MAX_ENTRY_SPREAD = 0.0015   # エントリー時許容スプレッド: 0.15%（不利側。超えたらロールバック）
 
 DATA_DIR     = os.path.join(os.path.dirname(__file__), "data")
 FUNDING_CSV  = os.path.join(DATA_DIR, "funding_log.csv")
-MEXC_FUNDING_CSV = os.path.join(DATA_DIR, "mexc_funding_log.csv")
+MEXC_FUNDING_CSV    = os.path.join(DATA_DIR, "mexc_funding_log.csv")
+LIGHTER_FUNDING_CSV = os.path.join(DATA_DIR, "lighter_funding_log.csv")
 STATE_FILE   = os.path.join(DATA_DIR, "taker_state.json")
 
 HL_PRIVATE_KEY  = os.environ["HL_PRIVATE_KEY"]
-MEXC_API_KEY    = os.environ["MEXC_API_KEY"]
-MEXC_API_SECRET = os.environ["MEXC_API_SECRET"]
+# MEXC 鍵は MEXC モード時のみ必須（LIGHTER モード時は空でも可）
+MEXC_API_KEY    = os.environ.get("MEXC_API_KEY", "")
+MEXC_API_SECRET = os.environ.get("MEXC_API_SECRET", "")
 TG_TOKEN        = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TG_CHAT         = os.environ.get("TELEGRAM_CHAT_ID", "")
 X_API_KEY       = os.environ.get("X_API_KEY", "")
@@ -51,6 +66,16 @@ X_ACCESS_TOKEN  = os.environ.get("X_ACCESS_TOKEN", "")
 X_ACCESS_SECRET = os.environ.get("X_ACCESS_TOKEN_SECRET", "")
 GMAIL_ADDRESS   = os.environ.get("GMAIL_ADDRESS", "")
 GMAIL_PASSWORD  = os.environ.get("GMAIL_APP_PASSWORD", "")
+
+# ── Lighter クライアントは LIGHTER モード時のみ import ────────────
+lighter_client = None
+if EXCHANGE_MODE == "LIGHTER":
+    try:
+        import lighter_client as _lc
+        lighter_client = _lc
+    except ImportError as e:
+        print(f"[FATAL] EXCHANGE_MODE=LIGHTER なのに lighter_client を import できませんでした: {e}")
+        raise
 
 
 # ── Telegram ─────────────────────────────────────────────────────
@@ -140,19 +165,26 @@ def get_latest_hl_signals(n: int = 2) -> dict:
 
 def get_latest_net_signals(n: int = 2) -> dict:
     """
-    HL/MEXC の直近n回からネットFRシグナルを返す。
-    net_short_1h = HL_SHORT受取 + MEXC_LONG受取 = hl_fr_1h - mexc_fr_1h
-    net_long_1h  = HL_LONG受取  + MEXC_SHORT受取 = mexc_fr_1h - hl_fr_1h
+    HL × Counter (Lighter or MEXC) の直近n回からネットFRシグナルを返す。
+    net_short_1h = HL_SHORT受取 + COUNTER_LONG受取  = hl_fr_1h - counter_fr_1h
+    net_long_1h  = HL_LONG受取  + COUNTER_SHORT受取 = counter_fr_1h - hl_fr_1h
+
+    EXCHANGE_MODE に応じて Counter CSV（LIGHTER_FUNDING_CSV or MEXC_FUNDING_CSV）を使用。
+    戻り値の dict には mexc_fr_1h / counter_fr_1h の両キーを含める
+    （旧コード互換のため mexc_fr_1h も保持）。
     """
     if not os.path.exists(FUNDING_CSV):
         print(f"[WARN] HL funding CSV が見つかりません: {FUNDING_CSV}")
         return {}
-    if not os.path.exists(MEXC_FUNDING_CSV):
-        print(f"[WARN] MEXC funding CSV が見つかりません: {MEXC_FUNDING_CSV}")
+
+    counter_csv = LIGHTER_FUNDING_CSV if EXCHANGE_MODE == "LIGHTER" else MEXC_FUNDING_CSV
+    counter_label = "Lighter" if EXCHANGE_MODE == "LIGHTER" else "MEXC"
+    if not os.path.exists(counter_csv):
+        print(f"[WARN] {counter_label} funding CSV が見つかりません: {counter_csv}")
         return {}
 
     hl_rows_by_coin: dict = defaultdict(list)
-    mx_rows_by_coin: dict = defaultdict(list)
+    ct_rows_by_coin: dict = defaultdict(list)
 
     with open(FUNDING_CSV) as f:
         for row in csv.DictReader(f):
@@ -166,39 +198,41 @@ def get_latest_net_signals(n: int = 2) -> dict:
                 continue
             hl_rows_by_coin[coin].append({"ts": ts, "hl_fr_1h": hl_rate_1h})
 
-    with open(MEXC_FUNDING_CSV) as f:
+    with open(counter_csv) as f:
         for row in csv.DictReader(f):
             coin = row.get("coin", "")
             ts = row.get("timestamp_utc", "")
             if not coin or not ts:
                 continue
             try:
-                mx_rate_1h = float(row["funding_rate_1h"])
+                ct_rate_1h = float(row["funding_rate_1h"])
             except Exception:
                 continue
-            mx_rows_by_coin[coin].append({"ts": ts, "mexc_fr_1h": mx_rate_1h})
+            ct_rows_by_coin[coin].append({"ts": ts, "counter_fr_1h": ct_rate_1h})
 
     result = {}
     for coin, hl_rows in hl_rows_by_coin.items():
-        mx_rows = mx_rows_by_coin.get(coin, [])
-        if not mx_rows:
+        ct_rows = ct_rows_by_coin.get(coin, [])
+        if not ct_rows:
             continue
 
         hl_by_ts = {r["ts"]: float(r["hl_fr_1h"]) for r in hl_rows}
-        mx_by_ts = {r["ts"]: float(r["mexc_fr_1h"]) for r in mx_rows}
-        common_ts = sorted(set(hl_by_ts.keys()) & set(mx_by_ts.keys()))
+        ct_by_ts = {r["ts"]: float(r["counter_fr_1h"]) for r in ct_rows}
+        common_ts = sorted(set(hl_by_ts.keys()) & set(ct_by_ts.keys()))
         if not common_ts:
             continue
 
         combined = []
         for ts in common_ts[-n:]:
             hl_fr_1h = hl_by_ts[ts]
-            mexc_fr_1h = mx_by_ts[ts]
-            net_short = hl_fr_1h - mexc_fr_1h
+            counter_fr_1h = ct_by_ts[ts]
+            net_short = hl_fr_1h - counter_fr_1h
             combined.append({
                 "ts": ts,
                 "hl_fr_1h": hl_fr_1h,
-                "mexc_fr_1h": mexc_fr_1h,
+                "counter_fr_1h": counter_fr_1h,
+                # 旧コード互換（"mexc_fr_1h" キーも保持）
+                "mexc_fr_1h": counter_fr_1h,
                 "net_short_1h": net_short,
                 "net_long_1h": -net_short,
             })
@@ -323,6 +357,114 @@ def hl_force_close(exchange: Exchange, info: Info, coin: str, address: str,
         raise RuntimeError(f"HL force close error: {status['error']}")
     filled_price = float(status.get("filled", {}).get("avgPx", price))
     return {"close_price": filled_price}
+
+
+# ── Counter-Exchange 抽象化レイヤー ───────────────────────────────
+# EXCHANGE_MODE に応じて Lighter / MEXC を切り替える統一 API
+# state["positions"][coin]["exchange"] で開いたポジションの取引所を記録。
+# 既存の MEXC ポジションは後方互換（exchange キーなし=mexc とみなす）
+
+def counter_init():
+    """Counter-exchange クライアントを初期化。"""
+    if EXCHANGE_MODE == "LIGHTER":
+        return None  # lighter_client はモジュールレベル関数のためクライアント不要
+    else:
+        mexc = get_mexc()
+        mexc.load_markets()
+        return mexc
+
+
+def counter_get_open_coins(client) -> set:
+    """Counter-exchange の実ポジション銘柄セットを返す（None=API失敗）。"""
+    if EXCHANGE_MODE == "LIGHTER":
+        positions = lighter_client.get_positions()
+        if positions is None:
+            return None
+        return {p["symbol"] for p in positions}
+    else:
+        return get_mexc_open_coins(client)
+
+
+def counter_open_long(client, coin: str, size_usd: float) -> dict:
+    """Counter-exchange で LONG を開く。戻り値は normalize 済み。
+    返却 dict: {size_coin, entry_price, exchange, [contracts, contract_size]}
+    """
+    if EXCHANGE_MODE == "LIGHTER":
+        res = lighter_client.place_order(symbol=coin, side="buy", size_usd=size_usd)
+        if res is None:
+            raise RuntimeError(f"Lighter open long failed: {coin}")
+        return {
+            "size_coin":   res["size_coin"],
+            "entry_price": res["entry_price"],
+            "exchange":    "lighter",
+        }
+    else:
+        res = mexc_open_long(client, coin, size_usd)
+        return {
+            "size_coin":     res["contracts"] * res["contract_size"],
+            "entry_price":   res["entry_price"],
+            "contracts":     res["contracts"],
+            "contract_size": res["contract_size"],
+            "exchange":      "mexc",
+        }
+
+
+def counter_open_short(client, coin: str, size_usd: float) -> dict:
+    if EXCHANGE_MODE == "LIGHTER":
+        res = lighter_client.place_order(symbol=coin, side="sell", size_usd=size_usd)
+        if res is None:
+            raise RuntimeError(f"Lighter open short failed: {coin}")
+        return {
+            "size_coin":   res["size_coin"],
+            "entry_price": res["entry_price"],
+            "exchange":    "lighter",
+        }
+    else:
+        res = mexc_open_short(client, coin, size_usd)
+        return {
+            "size_coin":     res["contracts"] * res["contract_size"],
+            "entry_price":   res["entry_price"],
+            "contracts":     res["contracts"],
+            "contract_size": res["contract_size"],
+            "exchange":      "mexc",
+        }
+
+
+def counter_close(client, coin: str, direction: str, pos_state: dict) -> dict:
+    """Counter-exchange のポジションをクローズ。state の情報を元に適切に処理。
+    direction: "short_fr"=Counterは LONG 保有、"long_fr"=Counterは SHORT 保有
+    """
+    exchange = pos_state.get("exchange", "mexc")  # 後方互換: 未記載なら mexc
+    if exchange == "lighter":
+        size_coin = float(pos_state.get("counter_size_coin") or pos_state.get("size_coin") or 0)
+        close_side = "sell" if direction == "short_fr" else "buy"
+        res = lighter_client.close_position(symbol=coin, side=close_side, size_coin=size_coin)
+        if res is None:
+            raise RuntimeError(f"Lighter close failed: {coin}")
+        return res
+    else:
+        contracts = int(pos_state.get("mexc_contracts", 0))
+        if direction == "short_fr":
+            return mexc_close_long(client, coin, contracts)
+        else:
+            return mexc_close_short(client, coin, contracts)
+
+
+def counter_force_close(client, coin: str, direction: str, pos_state: dict = None) -> dict:
+    """Counter-exchange のポジションを強制クローズ。"""
+    exchange = (pos_state or {}).get("exchange") or (
+        "lighter" if EXCHANGE_MODE == "LIGHTER" else "mexc"
+    )
+    if exchange == "lighter":
+        res = lighter_client.force_close_position(symbol=coin)
+        # ポジションが既になければ None が返る
+        return res or {"close_price": 0.0}
+    else:
+        return mexc_force_close(client, coin, direction)
+
+
+def counter_label() -> str:
+    return "Lighter" if EXCHANGE_MODE == "LIGHTER" else "MEXC"
 
 
 # ── MEXC ─────────────────────────────────────────────────────────
@@ -528,11 +670,14 @@ def main():
     state     = load_state()
     positions = state["positions"]
 
+    print(f"=== EXCHANGE_MODE = {EXCHANGE_MODE} ===")
+
     wallet   = Account.from_key(HL_PRIVATE_KEY)
     info     = Info(skip_ws=True)
     exchange = Exchange(wallet)
-    mexc     = get_mexc()
-    mexc.load_markets()
+    counter_client = counter_init()   # Lighter は None, MEXC は ccxt client
+    # 旧コード互換のため mexc 変数も残す（MEXC モード時のみ）
+    mexc = counter_client if EXCHANGE_MODE == "MEXC" else None
 
     sz_decimals_map = get_sz_decimals(info)
     hl_open_coins   = get_hl_open_coins(info, wallet.address)
@@ -567,7 +712,7 @@ def main():
 
             if current_fr >= EXIT_FR_1H:
                 print(f"[DANGER HOLD] {coin}  FR={current_fr*100:.4f}%/h  保有継続（HL裸注意）")
-                tg(f"⚠️ 危険ポジション保有中: {coin}  FR={current_fr*100:.4f}%/h\nHL裸ショート・MEXCヘッジなし")
+                tg(f"⚠️ 危険ポジション保有中: {coin}  FR={current_fr*100:.4f}%/h\nHL裸ショート・{counter_label()}ヘッジなし")
                 continue
 
             print(f"[DANGER EXIT] {coin}  FR={current_fr*100:.4f}%/h < {EXIT_FR_1H*100:.4f}% → HL決済試行")
@@ -629,23 +774,30 @@ def main():
         # ── 通常ポジション：決済判断 ──────────────────────────
         sig = signals.get(coin, [])
         if not sig:
-            print(f"[SKIP] {coin} ネットFRデータ不足（HL/MEXC両方の最新データが未取得）")
+            print(f"[SKIP] {coin} ネットFRデータ不足（HL/{counter_label()}両方の最新データが未取得）")
             tg(f"⚠️ {coin} ネットFRデータ不足\n今回はEXIT判定をスキップします")
             continue
 
+        # 取引所ラベル（ポジションを開いた取引所を表示）
+        pos_exchange = pos.get("exchange", "mexc")  # 後方互換
+        counter_name = "Lighter" if pos_exchange == "lighter" else "MEXC"
+
         direction  = pos.get("direction", "short_fr")
-        side_label = "HL SHORT × MEXC LONG" if direction == "short_fr" else "HL LONG × MEXC SHORT"
+        side_label = (f"HL SHORT × {counter_name} LONG" if direction == "short_fr"
+                      else f"HL LONG × {counter_name} SHORT")
 
         last_row = sig[-1]
         current_net_fr = float(last_row["net_short_1h"] if direction == "short_fr" else last_row["net_long_1h"])
         hl_fr_now      = float(last_row["hl_fr_1h"])
-        mexc_fr_now    = float(last_row["mexc_fr_1h"])
+        counter_fr_now = float(last_row.get("counter_fr_1h", last_row.get("mexc_fr_1h", 0)))
         opened     = datetime.strptime(pos["opened_at"], "%Y-%m-%d %H:%M:%S")
         now_dt     = datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
         dur_h      = (now_dt - opened).total_seconds() / 3600
         entry_net_fr_1h = float(pos.get("entry_net_fr_1h", pos.get("fr_at_entry", 0)))
         est_fr_now = max(0.0, entry_net_fr_1h) * dur_h * pos["size_usd"]
-        cost       = 0.0017 * pos["size_usd"]
+        # コスト: Lighter なら 0.07% (HL x2 のみ)、MEXC なら 0.17% (HL + MEXC)
+        cost_rate  = 0.0007 if pos_exchange == "lighter" else 0.0017
+        cost       = cost_rate * pos["size_usd"]
         cost_recovered = est_fr_now >= cost
 
         exit_threshold = EXIT_FR_RECOVERED if cost_recovered else EXIT_FR_1H
@@ -653,39 +805,52 @@ def main():
         if current_net_fr >= exit_threshold:
             print(
                 f"[HOLD] {coin}  netFR={current_net_fr*100:.4f}%/h  "
-                f"(HL={hl_fr_now*100:+.4f}%/h, MEXC={mexc_fr_now*100:+.4f}%/h) 保有継続"
+                f"(HL={hl_fr_now*100:+.4f}%/h, {counter_name}={counter_fr_now*100:+.4f}%/h) 保有継続"
                 f"{'（コスト回収済）' if cost_recovered else ''}"
             )
             continue
 
         print(
             f"[EXIT] {coin}  netFR={current_net_fr*100:.4f}%/h "
-            f"(HL={hl_fr_now*100:+.4f}%/h, MEXC={mexc_fr_now*100:+.4f}%/h) "
+            f"(HL={hl_fr_now*100:+.4f}%/h, {counter_name}={counter_fr_now*100:+.4f}%/h) "
             f"< {exit_threshold*100:.4f}% → 決済"
         )
 
         # ── 実ポジション事前チェック ──
-        hl_has_pos   = coin in hl_open_coins
-        mexc_coins   = get_mexc_open_coins(mexc)
-        if mexc_coins is None:
-            print(f"  [SKIP] {coin}: MEXC API失敗 → 今回は決済判断スキップ")
-            tg(f"⚠️ {coin} MEXC実ポジション取得失敗\n次のスキャンで再試行します")
-            continue
-        mexc_has_pos = coin in mexc_coins
+        hl_has_pos = coin in hl_open_coins
+        # ポジションを開いた取引所で実ポジション確認（モード異なる場合も正しい取引所を見る）
+        if pos_exchange == "lighter":
+            counter_open_coins_now = lighter_client.get_positions()
+            if counter_open_coins_now is None:
+                print(f"  [SKIP] {coin}: Lighter API失敗 → 今回は決済判断スキップ")
+                tg(f"⚠️ {coin} Lighter実ポジション取得失敗\n次のスキャンで再試行します")
+                continue
+            counter_coins = {p["symbol"] for p in counter_open_coins_now}
+        else:
+            # MEXC ポジションの決済（EXCHANGE_MODE が LIGHTER でも旧 MEXC ポジションは処理可能）
+            if mexc is None:
+                mexc = get_mexc()
+                mexc.load_markets()
+            counter_coins = get_mexc_open_coins(mexc)
+            if counter_coins is None:
+                print(f"  [SKIP] {coin}: MEXC API失敗 → 今回は決済判断スキップ")
+                tg(f"⚠️ {coin} MEXC実ポジション取得失敗\n次のスキャンで再試行します")
+                continue
+        counter_has_pos = coin in counter_coins
 
         # 両方ともポジションなし → state.jsonのゴースト → 掃除して終了
-        if not hl_has_pos and not mexc_has_pos:
-            print(f"  {coin}: HL/MEXC両方ポジションなし → stateから削除")
+        if not hl_has_pos and not counter_has_pos:
+            print(f"  {coin}: HL/{counter_name}両方ポジションなし → stateから削除")
             del positions[coin]
             save_state(state)
-            tg(f"🧹 ゴーストポジション削除: {coin}\nHL/MEXC両方にポジションなし\nstate.jsonをクリーンアップしました")
+            tg(f"🧹 ゴーストポジション削除: {coin}\nHL/{counter_name}両方にポジションなし\nstate.jsonをクリーンアップしました")
             continue
 
         # 片側のみポジションなし → 手動決済された可能性を通知
-        if hl_has_pos and not mexc_has_pos:
-            tg(f"⚠️ {coin}: MEXC側ポジションなし（手動決済？）\nHL側のみ決済を試行します")
-        elif not hl_has_pos and mexc_has_pos:
-            tg(f"⚠️ {coin}: HL側ポジションなし（手動決済？）\nMEXC側のみ決済を試行します")
+        if hl_has_pos and not counter_has_pos:
+            tg(f"⚠️ {coin}: {counter_name}側ポジションなし（手動決済？）\nHL側のみ決済を試行します")
+        elif not hl_has_pos and counter_has_pos:
+            tg(f"⚠️ {coin}: HL側ポジションなし（手動決済？）\n{counter_name}側のみ決済を試行します")
 
         # HL決済
         hl_ok = False
@@ -727,46 +892,51 @@ def main():
                     )
                     print(f"  HL force close失敗: {fe}")
 
-        # MEXC決済
-        mexc_ok = False
-        if not mexc_has_pos:
-            print(f"  MEXC {coin}: ポジションなし → スキップ")
-            mexc_ok = True
+        # Counter-Exchange 決済（Lighter or MEXC）
+        counter_ok = False
+        # ポジションを開いた取引所に応じたクライアントを準備
+        if pos_exchange == "lighter":
+            ct_client = None
+        else:
+            if mexc is None:
+                mexc = get_mexc()
+                mexc.load_markets()
+            ct_client = mexc
+
+        if not counter_has_pos:
+            print(f"  {counter_name} {coin}: ポジションなし → スキップ")
+            counter_ok = True
         else:
             for attempt in range(1, 4):
                 try:
-                    if direction == "short_fr":
-                        mexc_close_long(mexc, coin, int(pos["mexc_contracts"]))
-                    else:
-                        mexc_close_short(mexc, coin, int(pos["mexc_contracts"]))
-                    mexc_ok = True
+                    counter_close(ct_client, coin, direction, pos)
+                    counter_ok = True
                     break
                 except Exception as e:
                     err_str = str(e)
-                    print(f"  MEXC close attempt {attempt}/3: {err_str}")
-                    # すでに決済済み（ポジションなし）は成功とみなす
+                    print(f"  {counter_name} close attempt {attempt}/3: {err_str}")
                     if "nonexistent or closed" in err_str or "Position is nonexistent" in err_str:
-                        print(f"  MEXC {coin} ポジションなし確認 → 決済済みとみなす")
-                        mexc_ok = True
+                        print(f"  {counter_name} {coin} ポジションなし確認 → 決済済みとみなす")
+                        counter_ok = True
                         break
                     if attempt < 3:
                         time.sleep(2)
             # 3回失敗 → force_closeを最終手段として試行
-            if not mexc_ok:
+            if not counter_ok:
                 try:
-                    mexc_force_close(mexc, coin, direction)
-                    print(f"  MEXC force close成功")
-                    tg(f"⚠️ MEXC 強制決済実行: {coin}\n通常クローズ 3回失敗のため実ポジション取得して強制クローズしました")
-                    mexc_ok = True
+                    counter_force_close(ct_client, coin, direction, pos)
+                    print(f"  {counter_name} force close成功")
+                    tg(f"⚠️ {counter_name} 強制決済実行: {coin}\n通常クローズ 3回失敗のため強制クローズしました")
+                    counter_ok = True
                 except Exception as mfe:
-                    tg(f"⚠️ EXIT MEXC ERROR: {coin}\n3回失敗 + 強制決済も失敗\n手動確認してください")
+                    tg(f"⚠️ EXIT {counter_name} ERROR: {coin}\n3回失敗 + 強制決済も失敗\n手動確認してください")
                     send_gmail(
-                        subject=f"[MindRaid] ⚠️ EXIT MEXC FAILED: {coin}",
-                        body=f"MEXC決済が完全に失敗しました。手動で確認・決済してください。\n\n銘柄: {coin}\n時刻: {ts} UTC\nエラー: {mfe}"
+                        subject=f"[MindRaid] ⚠️ EXIT {counter_name} FAILED: {coin}",
+                        body=f"{counter_name}決済が完全に失敗しました。手動で確認・決済してください。\n\n銘柄: {coin}\n時刻: {ts} UTC\nエラー: {mfe}"
                     )
-                    print(f"  MEXC force close失敗: {mfe}")
+                    print(f"  {counter_name} force close失敗: {mfe}")
 
-        if hl_ok and mexc_ok:
+        if hl_ok and counter_ok:
             est_fr   = est_fr_now
             est_cost = cost
             net      = est_fr - est_cost
@@ -778,7 +948,7 @@ def main():
                 f"🔴 EXIT: {coin}\n"
                 f"保有: {dur_h:.1f}h\n"
                 f"現在net FR: {current_net_fr:+.4%}/h\n"
-                f"現在HL FR: {hl_fr_now:+.4%}/h  MEXC FR: {mexc_fr_now:+.4%}/h\n"
+                f"現在HL FR: {hl_fr_now:+.4%}/h  {counter_name} FR: {counter_fr_now:+.4%}/h\n"
                 f"推定FR収益: ${est_fr:.2f}\n"
                 f"手数料: ${est_cost:.2f}\n"
                 f"推定net: ${net:.2f}"
@@ -800,7 +970,7 @@ def main():
                     f"保有時間: {dur_h:.1f}h\n"
                     f"現在net FR: {current_net_fr:+.4%}/h\n"
                     f"現在HL FR: {hl_fr_now:+.4%}/h\n"
-                    f"現在MEXC FR: {mexc_fr_now:+.4%}/h\n"
+                    f"現在{counter_name} FR: {counter_fr_now:+.4%}/h\n"
                     f"推定FR収益: ${est_fr:.2f}\n"
                     f"手数料: ${est_cost:.2f}\n"
                     f"推定net: ${net:.2f}\n"
@@ -813,7 +983,7 @@ def main():
             tg(
                 f"⚠️ EXIT 部分失敗: {coin}\n"
                 f"現在net FR: {current_net_fr:+.4%}/h\n"
-                f"HL: {'✅' if hl_ok else '❌'}  MEXC: {'✅' if mexc_ok else '❌'}\n"
+                f"HL: {'✅' if hl_ok else '❌'}  {counter_name}: {'✅' if counter_ok else '❌'}\n"
                 f"次のスキャンで再試行します"
             )
 
@@ -848,13 +1018,15 @@ def main():
         if avg_net_fr_1h < MIN_FR_1H:
             continue
 
-        avg_hl_fr_1h   = sum(float(r["hl_fr_1h"]) for r in rows) / len(rows)
-        avg_mexc_fr_1h = sum(float(r["mexc_fr_1h"]) for r in rows) / len(rows)
-        side_label = "HL SHORT × MEXC LONG" if direction == "short_fr" else "HL LONG × MEXC SHORT"
+        avg_hl_fr_1h      = sum(float(r["hl_fr_1h"]) for r in rows) / len(rows)
+        avg_counter_fr_1h = sum(float(r.get("counter_fr_1h", r.get("mexc_fr_1h", 0))) for r in rows) / len(rows)
+        counter_name_enter = counter_label()
+        side_label = (f"HL SHORT × {counter_name_enter} LONG" if direction == "short_fr"
+                      else f"HL LONG × {counter_name_enter} SHORT")
 
         print(
             f"[ENTRY] {coin}  netFR={avg_net_fr_1h:.4%}/h "
-            f"(HL={avg_hl_fr_1h:+.4%}/h, MEXC={avg_mexc_fr_1h:+.4%}/h)  "
+            f"(HL={avg_hl_fr_1h:+.4%}/h, {counter_name_enter}={avg_counter_fr_1h:+.4%}/h)  "
             f"{side_label}  size=${TRADE_SIZE_USD}"
         )
 
@@ -877,15 +1049,15 @@ def main():
 
         time.sleep(1)
 
-        # MEXC発注
+        # Counter-Exchange 発注（Lighter または MEXC）
         try:
             if direction == "short_fr":
-                mx_res = mexc_open_long(mexc, coin, TRADE_SIZE_USD)
+                ct_res = counter_open_long(counter_client, coin, TRADE_SIZE_USD)
             else:
-                mx_res = mexc_open_short(mexc, coin, TRADE_SIZE_USD)
+                ct_res = counter_open_short(counter_client, coin, TRADE_SIZE_USD)
         except Exception as e:
-            print(f"  MEXC open error → HL rollback: {e}")
-            tg(f"⚠️ ENTRY MEXC ERROR: {coin}\n{e}\nHL rollback中...")
+            print(f"  {counter_name_enter} open error → HL rollback: {e}")
+            tg(f"⚠️ ENTRY {counter_name_enter} ERROR: {coin}\n{e}\nHL rollback中...")
             hl_rb_ok = False
             try:
                 if direction == "short_fr":
@@ -910,26 +1082,29 @@ def main():
                 tg(f"  HL rollback完了（実ポジション消滅確認）")
             else:
                 tg(f"  HL rollback失敗: {coin} HL裸ポジション残存")
-                positions[coin] = {"status": "danger", "opened_at": ts, "reason": "mexc_error_hl_rollback_failed"}
+                positions[coin] = {
+                    "status": "danger", "opened_at": ts,
+                    "reason": f"{counter_name_enter.lower()}_error_hl_rollback_failed"
+                }
                 save_state(state)
                 send_gmail(
                     subject=f"[MindRaid] 🚨 HL裸ポジション: {coin}",
-                    body=f"MEXC発注失敗後のHLロールバックが失敗。手動でHL確認・決済してください。\n\n銘柄: {coin}\n時刻: {ts} UTC"
+                    body=f"{counter_name_enter}発注失敗後のHLロールバックが失敗。手動でHL確認・決済してください。\n\n銘柄: {coin}\n時刻: {ts} UTC"
                 )
                 tg(f"🚨 危険ポジション記録: {coin}\nHL裸ポジションあり。手動で確認・決済してください")
             continue
 
         # ── スプレッドチェック（不利側超過でロールバック）──
-        hl_px   = float(hl_res["entry_price"])
-        mexc_px = float(mx_res["entry_price"])
-        # short_fr: HL売→MEXC買。MEXC買値 > HL売値 が不利（即時損失）
-        # long_fr : HL買→MEXC売。MEXC売値 < HL買値 が不利
+        hl_px = float(hl_res["entry_price"])
+        ct_px = float(ct_res["entry_price"])
+        # short_fr: HL売→Counter買。Counter買値 > HL売値 が不利（即時損失）
+        # long_fr : HL買→Counter売。Counter売値 < HL買値 が不利
         if direction == "short_fr":
-            unfavorable_ratio = (mexc_px - hl_px) / hl_px
+            unfavorable_ratio = (ct_px - hl_px) / hl_px
         else:
-            unfavorable_ratio = (hl_px - mexc_px) / hl_px
+            unfavorable_ratio = (hl_px - ct_px) / hl_px
         spread_pct = unfavorable_ratio * 100
-        print(f"  スプレッド: HL={hl_px} MEXC={mexc_px} 不利側={spread_pct:+.4f}%")
+        print(f"  スプレッド: HL={hl_px} {counter_name_enter}={ct_px} 不利側={spread_pct:+.4f}%")
 
         if unfavorable_ratio > MAX_ENTRY_SPREAD:
             print(f"  [ROLLBACK] スプレッド過大 ({spread_pct:.4f}% > {MAX_ENTRY_SPREAD*100:.2f}%) → 両脚クローズ")
@@ -937,7 +1112,7 @@ def main():
                 f"⚠️ ENTRY 見送り: {coin}\n"
                 f"スプレッド {spread_pct:+.4f}% > 許容 {MAX_ENTRY_SPREAD*100:.2f}%\n"
                 f"HL {'売' if direction=='short_fr' else '買'}: {hl_px}\n"
-                f"MEXC {'買' if direction=='short_fr' else '売'}: {mexc_px}\n"
+                f"{counter_name_enter} {'買' if direction=='short_fr' else '売'}: {ct_px}\n"
                 f"両脚ロールバック中..."
             )
             hl_rb_ok = False
@@ -955,15 +1130,18 @@ def main():
                 except Exception as fe:
                     print(f"  HL force rollback失敗: {fe}")
 
-            mx_rb_ok = False
+            # Counter-exchange rollback: 今開いたポジションを対象とする仮 state を構築
+            rollback_pos_state = {
+                "exchange": ct_res["exchange"],
+                "counter_size_coin": ct_res.get("size_coin"),
+                "mexc_contracts": ct_res.get("contracts"),
+            }
+            ct_rb_ok = False
             try:
-                if direction == "short_fr":
-                    mexc_force_close(mexc, coin, "short_fr")
-                else:
-                    mexc_force_close(mexc, coin, "long_fr")
-                mx_rb_ok = True
+                counter_force_close(counter_client, coin, direction, rollback_pos_state)
+                ct_rb_ok = True
             except Exception as e:
-                print(f"  MEXC rollback失敗: {e}")
+                print(f"  {counter_name_enter} rollback失敗: {e}")
 
             # API応答に関わらず実ポジションで最終確認
             import time as _time2; _time2.sleep(2)
@@ -972,21 +1150,20 @@ def main():
                 hl_rb_ok = False
                 print(f"  [スプレッド検証失敗] HL {coin} ポジションまだ残存")
 
-            if hl_rb_ok and mx_rb_ok:
+            if hl_rb_ok and ct_rb_ok:
                 tg(f"✅ ロールバック完了: {coin}\nエントリー見送りました")
             else:
                 tg(
                     f"🚨 ロールバック失敗: {coin}\n"
-                    f"HL: {'✅' if hl_rb_ok else '❌'}  MEXC: {'✅' if mx_rb_ok else '❌'}\n"
+                    f"HL: {'✅' if hl_rb_ok else '❌'}  {counter_name_enter}: {'✅' if ct_rb_ok else '❌'}\n"
                     f"手動で確認・決済してください"
                 )
                 send_gmail(
                     subject=f"[MindRaid] 🚨 ROLLBACK FAILED: {coin}",
                     body=f"スプレッド過大によるロールバックが失敗しました。手動確認してください。\n\n"
                          f"銘柄: {coin}\nHL rollback: {'OK' if hl_rb_ok else 'FAIL'}\n"
-                         f"MEXC rollback: {'OK' if mx_rb_ok else 'FAIL'}\n時刻: {ts} UTC"
+                         f"{counter_name_enter} rollback: {'OK' if ct_rb_ok else 'FAIL'}\n時刻: {ts} UTC"
                 )
-                # ロールバック失敗時のみ state 記録（手動対応必要）
                 positions[coin] = {
                     "status": "danger",
                     "opened_at": ts,
@@ -995,31 +1172,46 @@ def main():
                 save_state(state)
             continue
 
-        positions[coin] = {
-            "direction":     direction,
-            "opened_at":     ts,
-            "fr_at_entry":   avg_net_fr_1h,  # 互換のため残す（値はnetFR）
+        # ── state 記録（EXCHANGE_MODE に応じてフィールドを保存）──
+        state_entry = {
+            "exchange":        ct_res["exchange"],    # "lighter" or "mexc"
+            "direction":       direction,
+            "opened_at":       ts,
+            "fr_at_entry":     avg_net_fr_1h,  # 互換用
             "entry_net_fr_1h": avg_net_fr_1h,
-            "entry_hl_fr_1h": avg_hl_fr_1h,
-            "entry_mexc_fr_1h": avg_mexc_fr_1h,
-            "size_usd":      TRADE_SIZE_USD,
-            "hl_size_coin":  hl_res["size_coin"],
-            "hl_entry_price": hl_res["entry_price"],
-            "mexc_contracts": mx_res["contracts"],
-            "mexc_contract_size": mx_res["contract_size"],
-            "mexc_entry_price": mx_res["entry_price"],
-            "entry_spread":   unfavorable_ratio,
+            "entry_hl_fr_1h":  avg_hl_fr_1h,
+            "entry_counter_fr_1h": avg_counter_fr_1h,
+            # 旧コード互換フィールド
+            "entry_mexc_fr_1h": avg_counter_fr_1h,
+            "size_usd":        TRADE_SIZE_USD,
+            "hl_size_coin":    hl_res["size_coin"],
+            "hl_entry_price":  hl_res["entry_price"],
+            "counter_size_coin":  ct_res["size_coin"],
+            "counter_entry_price": ct_res["entry_price"],
+            "entry_spread":    unfavorable_ratio,
         }
+        # MEXC 固有フィールド
+        if ct_res["exchange"] == "mexc":
+            state_entry["mexc_contracts"]     = ct_res["contracts"]
+            state_entry["mexc_contract_size"] = ct_res["contract_size"]
+            state_entry["mexc_entry_price"]   = ct_res["entry_price"]
+        positions[coin] = state_entry
         save_state(state)
+
+        # Telegram 通知（取引所に応じて size 表示を変更）
+        if ct_res["exchange"] == "mexc":
+            ct_size_str = f"({ct_res['contracts']} contracts)"
+        else:
+            ct_size_str = f"({ct_res['size_coin']} coins)"
 
         tg(
             f"🟢 ENTRY: {coin}\n"
             f"方向: {side_label}\n"
             f"net FR: {avg_net_fr_1h:.4%}/h\n"
-            f"HL FR: {avg_hl_fr_1h:+.4%}/h  MEXC FR: {avg_mexc_fr_1h:+.4%}/h\n"
+            f"HL FR: {avg_hl_fr_1h:+.4%}/h  {counter_name_enter} FR: {avg_counter_fr_1h:+.4%}/h\n"
             f"Size: ${TRADE_SIZE_USD}\n"
             f"HL @ {hl_res['entry_price']:.6f}  ({hl_res['size_coin']} coins)\n"
-            f"MEXC @ {mx_res['entry_price']:.6f}  ({mx_res['contracts']} contracts)"
+            f"{counter_name_enter} @ {ct_res['entry_price']:.6f}  {ct_size_str}"
         )
         post_x(
             f"🟢 FR Arb エントリー #{coin}\n"
@@ -1035,10 +1227,10 @@ def main():
                 f"方向: {side_label}\n"
                 f"net FR: {avg_net_fr_1h:.4%}/h\n"
                 f"HL FR: {avg_hl_fr_1h:+.4%}/h\n"
-                f"MEXC FR: {avg_mexc_fr_1h:+.4%}/h\n"
+                f"{counter_name_enter} FR: {avg_counter_fr_1h:+.4%}/h\n"
                 f"サイズ: ${TRADE_SIZE_USD}\n"
                 f"HL @ {hl_res['entry_price']:.6f}\n"
-                f"MEXC @ {mx_res['entry_price']:.6f}\n"
+                f"{counter_name_enter} @ {ct_res['entry_price']:.6f}\n"
                 f"時刻: {ts} UTC"
             )
         )

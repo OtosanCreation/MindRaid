@@ -128,28 +128,40 @@ def save_pnl_snapshot(snap: dict) -> None:
         print(f"[WARN] PNLスナップショット保存失敗: {e}")
 
 
-def check_stuck_pnl(mexc_positions: list) -> list:
+def check_stuck_pnl(counter_positions: list) -> list:
     """前回と完全一致するPNLを検知して警告を返す"""
     prev = load_pnl_snapshot()
     warnings = []
     current = {}
-    for p in mexc_positions:
-        key = f"MEXC:{p['coin']}:{p['side']}"
+    for p in counter_positions:
+        coin = p.get("coin") or p.get("symbol", "")
+        side = p.get("side", "")
+        key  = f"{COUNTER_NAME}:{coin}:{side}"
         pnl_val = round(float(p.get("unrealized_pnl", 0)), 4)
         current[key] = pnl_val
         if key in prev and prev[key] == pnl_val and pnl_val != 0:
-            warnings.append(f"⚠️ {p['coin']} のPNLが前回と完全一致（${pnl_val:.2f}）— 計算固着の疑い")
+            warnings.append(f"⚠️ {coin} のPNLが前回と完全一致（${pnl_val:.2f}）— 計算固着の疑い")
         elif key in prev and pnl_val == 0:
-            warnings.append(f"⚠️ {p['coin']} のPNLが $0.00 — 計算失敗の可能性")
+            warnings.append(f"⚠️ {coin} のPNLが $0.00 — 計算失敗の可能性")
     save_pnl_snapshot(current)
     return warnings
 
 
-def build_position_section(hl_positions: list, mexc_positions: list) -> list:
+def fetch_lighter_positions() -> list:
+    """Lighter の実ポジションを取得"""
+    try:
+        import lighter_client
+        return lighter_client.get_positions()  # [{symbol, side, size, entry_price, unrealized_pnl}]
+    except Exception as e:
+        print(f"[WARN] Lighter実ポジション取得失敗: {e}")
+        return []
+
+
+def build_position_section(hl_positions: list, counter_positions: list) -> list:
     lines = ["📊 <b>現在のポジション</b>"]
 
-    if not hl_positions and not mexc_positions:
-        lines.append("  HL / MEXC: ポジションなし")
+    if not hl_positions and not counter_positions:
+        lines.append(f"  HL / {COUNTER_NAME}: ポジションなし")
         lines.append("")
         return lines
 
@@ -168,28 +180,36 @@ def build_position_section(hl_positions: list, mexc_positions: list) -> list:
     else:
         lines.append("  HL: ポジションなし")
 
-    # MEXCポジション
-    if mexc_positions:
-        for p in mexc_positions:
-            pnl  = p["unrealized_pnl"]
+    # Counter（Lighter or MEXC）ポジション
+    if counter_positions:
+        for p in counter_positions:
+            pnl  = float(p.get("unrealized_pnl", 0))
             sign = "+" if pnl >= 0 else ""
+            coin = p.get("coin") or p.get("symbol", "")
+            side = p.get("side", "")
+            size = p.get("size") or p.get("contracts", 0)
+            entry= p.get("entry_price") or p.get("entry_px", 0)
             lines.append(
-                f"  {'🔴' if p['side']=='LONG' else '🟢'} MEXC {p['coin']} {p['side']}"
-                f"  {p['contracts']:.0f}枚 @ ${p['entry_price']:.4f}"
+                f"  {'🔴' if side=='LONG' else '🟢'} {COUNTER_NAME} {coin} {side}"
+                f"  {float(size):.4f}枚 @ ${float(entry):.4f}"
                 f"\n    未実現PNL: <code>{sign}{pnl:.2f}$</code>"
             )
     else:
-        lines.append("  MEXC: ポジションなし")
+        lines.append(f"  {COUNTER_NAME}: ポジションなし")
 
     lines.append("")
     return lines
 
-TAKER_RT  = 0.00035 * 2   # 0.070%
-MAKER_RT  = 0.00010 * 2   # 0.020%
-ENTRY_FR  = 0.0010         # エントリー閾値: 0.10%/h（taker_bot.pyと同値）
-DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
-HL_FUNDING_CSV = os.path.join(DATA_DIR, "funding_log.csv")
-MEXC_FUNDING_CSV = os.path.join(DATA_DIR, "mexc_funding_log.csv")
+TAKER_RT     = 0.00035 * 2   # 0.070%
+MAKER_RT     = 0.00010 * 2   # 0.020%
+ENTRY_FR     = 0.0005         # エントリー閾値: 0.05%/h
+EXCHANGE_MODE = os.environ.get("EXCHANGE_MODE", "LIGHTER").upper()
+DATA_DIR     = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+HL_FUNDING_CSV      = os.path.join(DATA_DIR, "funding_log.csv")
+MEXC_FUNDING_CSV    = os.path.join(DATA_DIR, "mexc_funding_log.csv")
+LIGHTER_FUNDING_CSV = os.path.join(DATA_DIR, "lighter_funding_log.csv")
+COUNTER_CSV  = LIGHTER_FUNDING_CSV if EXCHANGE_MODE == "LIGHTER" else MEXC_FUNDING_CSV
+COUNTER_NAME = "Lighter" if EXCHANGE_MODE == "LIGHTER" else "MEXC"
 
 
 def load_env():
@@ -224,19 +244,20 @@ def fetch_data(info: Info):
 def load_latest_net_rates() -> dict:
     """
     CSVから coin ごとの最新共通timestampのFRを読み、net FR/h を返す。
-    net_short_1h = hl_fr_1h - mexc_fr_1h
-    net_long_1h  = mexc_fr_1h - hl_fr_1h
+    EXCHANGE_MODE に応じて Lighter または MEXC の CSV を使用。
+    net_short_1h = hl_fr_1h - counter_fr_1h  (HL売 × Counter買)
+    net_long_1h  = counter_fr_1h - hl_fr_1h  (HL買 × Counter売)
     """
-    if not os.path.exists(HL_FUNDING_CSV) or not os.path.exists(MEXC_FUNDING_CSV):
+    if not os.path.exists(HL_FUNDING_CSV) or not os.path.exists(COUNTER_CSV):
         return {}
 
     hl = defaultdict(dict)
-    mx = defaultdict(dict)
+    ct = defaultdict(dict)
 
     with open(HL_FUNDING_CSV) as f:
         for row in csv.DictReader(f):
             coin = row.get("coin", "")
-            ts = row.get("timestamp_utc", "")
+            ts   = row.get("timestamp_utc", "")
             if not coin or not ts:
                 continue
             try:
@@ -244,35 +265,35 @@ def load_latest_net_rates() -> dict:
             except Exception:
                 continue
 
-    with open(MEXC_FUNDING_CSV) as f:
+    with open(COUNTER_CSV) as f:
         for row in csv.DictReader(f):
             coin = row.get("coin", "")
-            ts = row.get("timestamp_utc", "")
+            ts   = row.get("timestamp_utc", "")
             if not coin or not ts:
                 continue
             try:
-                mx[coin][ts] = float(row["funding_rate_1h"])
+                ct[coin][ts] = float(row["funding_rate_1h"])
             except Exception:
                 continue
 
     out = {}
     for coin, hl_by_ts in hl.items():
-        mx_by_ts = mx.get(coin, {})
-        if not mx_by_ts:
+        ct_by_ts = ct.get(coin, {})
+        if not ct_by_ts:
             continue
-        common_ts = sorted(set(hl_by_ts.keys()) & set(mx_by_ts.keys()))
+        common_ts = sorted(set(hl_by_ts.keys()) & set(ct_by_ts.keys()))
         if not common_ts:
             continue
-        ts = common_ts[-1]
-        hl_rate = hl_by_ts[ts]
-        mx_rate = mx_by_ts[ts]
-        short_net = hl_rate - mx_rate
+        ts        = common_ts[-1]
+        hl_rate   = hl_by_ts[ts]
+        ct_rate   = ct_by_ts[ts]
+        short_net = hl_rate - ct_rate
         out[coin] = {
-            "ts": ts,
-            "hl_fr_1h": hl_rate,
-            "mexc_fr_1h": mx_rate,
-            "net_short_1h": short_net,
-            "net_long_1h": -short_net,
+            "ts":            ts,
+            "hl_fr_1h":      hl_rate,
+            "counter_fr_1h": ct_rate,
+            "net_short_1h":  short_net,
+            "net_long_1h":   -short_net,
         }
     return out
 
@@ -289,7 +310,7 @@ def send_message(token, chat_id, text):
         return json.loads(resp.read())
 
 
-def build_message(rows, now_str, hl_positions=None, mexc_positions=None, net_rates=None):
+def build_message(rows, now_str, hl_positions=None, counter_positions=None, net_rates=None):
     sorted_long  = sorted([r for r in rows if r["rate"] < 0], key=lambda r: r["rate"])
     sorted_short = sorted([r for r in rows if r["rate"] > 0], key=lambda r: r["rate"], reverse=True)
     maker_total = sum(1 for r in rows if abs(r["rate"]) > MAKER_RT)
@@ -305,12 +326,12 @@ def build_message(rows, now_str, hl_positions=None, mexc_positions=None, net_rat
     lines = [
         f"<b>⚡ MindRaid Alert</b>  {now_str} UTC",
         f"Hyperliquid {len(rows)}銘柄 | MAKER超え: {maker_total}銘柄 | "
-        f"エントリー判定: net FR (HL-MEXC) ≥ {ENTRY_FR*100:.2f}%/h",
+        f"エントリー判定: net FR (HL-{COUNTER_NAME}) ≥ {ENTRY_FR*100:.2f}%/h",
         "",
     ]
 
     # 既存ポジションの銘柄セット（エントリー予定から除外するため）
-    open_coins = {p["coin"] for p in (hl_positions or [])} | {p["coin"] for p in (mexc_positions or [])}
+    open_coins = {p["coin"] for p in (hl_positions or [])} | {p.get("coin", p.get("symbol","")) for p in (counter_positions or [])}
 
     entry_candidates = []
 
@@ -396,10 +417,10 @@ def build_message(rows, now_str, hl_positions=None, mexc_positions=None, net_rat
         lines.append("ℹ️ <b>net FR基準のエントリー候補なし</b>")
         lines.append("")
 
-    pos_lines = build_position_section(hl_positions or [], mexc_positions or [])
+    pos_lines = build_position_section(hl_positions or [], counter_positions or [])
     lines.extend(pos_lines)
 
-    stuck_warnings = check_stuck_pnl(mexc_positions or [])
+    stuck_warnings = check_stuck_pnl(counter_positions or [])
     if stuck_warnings:
         lines.extend(stuck_warnings)
         lines.append("")
@@ -418,17 +439,21 @@ def main():
     rows = fetch_data(info)
     net_rates = load_latest_net_rates()
 
-    hl_address    = os.environ.get("HL_WALLET_ADDRESS", "")
-    mexc_api_key  = os.environ.get("MEXC_API_KEY", "")
-    mexc_api_sec  = os.environ.get("MEXC_API_SECRET", "")
-    hl_positions   = fetch_hl_positions(hl_address)
-    mexc_positions = fetch_mexc_positions(mexc_api_key, mexc_api_sec)
+    hl_address = os.environ.get("HL_WALLET_ADDRESS", "")
+    hl_positions = fetch_hl_positions(hl_address)
+
+    if EXCHANGE_MODE == "LIGHTER":
+        counter_positions = fetch_lighter_positions()
+    else:
+        mexc_api_key = os.environ.get("MEXC_API_KEY", "")
+        mexc_api_sec = os.environ.get("MEXC_API_SECRET", "")
+        counter_positions = fetch_mexc_positions(mexc_api_key, mexc_api_sec)
 
     msg = build_message(
         rows,
         now_str,
         hl_positions=hl_positions,
-        mexc_positions=mexc_positions,
+        counter_positions=counter_positions,
         net_rates=net_rates,
     )
     print("--- Message preview ---")

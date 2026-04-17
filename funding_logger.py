@@ -22,8 +22,9 @@ VENUE     = "HlPerp"
 TAKER_RT  = 0.00045 * 2   # 往復 taker 0.09%（HL実績: 0.045%/side）
 MAKER_RT  = 0.00015 * 2   # 往復 maker 0.03%（HL実績: 0.015%/side）
 DATA_DIR  = os.path.join(os.path.dirname(__file__), "data")
-CSV_PATH      = os.path.join(DATA_DIR, "funding_log.csv")
-MEXC_CSV_PATH = os.path.join(DATA_DIR, "mexc_funding_log.csv")
+CSV_PATH         = os.path.join(DATA_DIR, "funding_log.csv")
+MEXC_CSV_PATH    = os.path.join(DATA_DIR, "mexc_funding_log.csv")
+LIGHTER_CSV_PATH = os.path.join(DATA_DIR, "lighter_funding_log.csv")
 FIELDNAMES = [
     "timestamp_utc", "coin",
     "funding_rate_1h", "funding_rate_8h", "funding_rate_24h",
@@ -32,6 +33,10 @@ FIELDNAMES = [
 MEXC_FIELDNAMES = [
     "timestamp_utc", "coin",
     "funding_rate_1h", "next_settle_time",
+]
+LIGHTER_FIELDNAMES = [
+    "timestamp_utc", "coin",
+    "funding_rate_1h",
 ]
 
 
@@ -117,6 +122,42 @@ def append_mexc_csv(rows: list[dict], ts: str) -> None:
             writer.writerow({"timestamp_utc": ts, **row})
 
 
+def fetch_lighter_funding(target_coins=None) -> list[dict]:
+    """
+    Lighter の funding rates を取得。lighter_client.get_funding_rates() は
+    Dict[symbol, rate_1h] を返す（Lighter は 1h interval なのでそのまま使える）。
+
+    target_coins が指定されれば、それでフィルタリング（HL共通銘柄のみなど）。
+    """
+    try:
+        import lighter_client
+        rates = lighter_client.get_funding_rates()  # {symbol: rate_1h}
+    except Exception as e:
+        print(f"[Lighter] FR 取得失敗: {e}")
+        return []
+
+    results = []
+    for coin, rate in rates.items():
+        if target_coins is not None and coin not in target_coins:
+            continue
+        results.append({
+            "coin":            coin,
+            "funding_rate_1h": rate,
+        })
+    return results
+
+
+def append_lighter_csv(rows: list[dict], ts: str) -> None:
+    os.makedirs(DATA_DIR, exist_ok=True)
+    write_header = not os.path.exists(LIGHTER_CSV_PATH)
+    with open(LIGHTER_CSV_PATH, "a", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=LIGHTER_FIELDNAMES)
+        if write_header:
+            writer.writeheader()
+        for row in rows:
+            writer.writerow({"timestamp_utc": ts, **row})
+
+
 def main() -> None:
     ts   = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     info = Info(skip_ws=True)
@@ -153,6 +194,29 @@ def main() -> None:
         print(f"  → {MEXC_CSV_PATH} に追記")
     else:
         print("  → データ取得なし")
+
+    # ── Lighter HL共通銘柄 ──────────────────────────────
+    print("--- Lighter ---")
+    try:
+        lighter_rows = fetch_lighter_funding(target_coins=hl_coins)
+        if lighter_rows:
+            append_lighter_csv(lighter_rows, ts)
+            print(f"  HL×Lighter共通: {len(lighter_rows)}銘柄 取得成功")
+            # スプレッド上位5件表示
+            hl_map = {r["coin"]: r["funding_rate_1h"] for r in hl_rows}
+            spreads = []
+            for r in lighter_rows:
+                hl_r = hl_map.get(r["coin"], 0)
+                spreads.append((r["coin"], r["funding_rate_1h"], hl_r, r["funding_rate_1h"] - hl_r))
+            spreads.sort(key=lambda x: abs(x[3]), reverse=True)
+            print("  スプレッド上位5:")
+            for coin, lt, hl, sp in spreads[:5]:
+                print(f"    {coin:<10} Lighter={lt:+.5f}  HL={hl:+.5f}  spread={sp:+.5f}")
+            print(f"  → {LIGHTER_CSV_PATH} に追記")
+        else:
+            print("  → データ取得なし")
+    except Exception as e:
+        print(f"  [Lighter] スキップ: {e}")
 
 
 if __name__ == "__main__":
