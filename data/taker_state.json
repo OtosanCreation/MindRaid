@@ -1,3 +1,19 @@
 {
-  "positions": {}
+  "positions": {
+    "TST": {
+      "direction": "short_fr",
+      "opened_at": "2026-04-17 02:31:38",
+      "fr_at_entry": 0.00321592605,
+      "entry_net_fr_1h": 0.00321592605,
+      "entry_hl_fr_1h": 0.00321117605,
+      "entry_mexc_fr_1h": -4.75e-06,
+      "size_usd": 90.0,
+      "hl_size_coin": 5539.0,
+      "hl_entry_price": 0.016282,
+      "mexc_contracts": 568,
+      "mexc_contract_size": 10.0,
+      "mexc_entry_price": 0.01585,
+      "entry_spread": -0.026532367031077374
+    }
+  }
 }
