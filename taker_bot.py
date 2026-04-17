@@ -65,8 +65,9 @@ X_API_KEY       = os.environ.get("X_API_KEY", "")
 X_API_SECRET    = os.environ.get("X_API_SECRET", "")
 X_ACCESS_TOKEN  = os.environ.get("X_ACCESS_TOKEN", "")
 X_ACCESS_SECRET = os.environ.get("X_ACCESS_TOKEN_SECRET", "")
-GMAIL_ADDRESS   = os.environ.get("GMAIL_ADDRESS", "")
-GMAIL_PASSWORD  = os.environ.get("GMAIL_APP_PASSWORD", "")
+GMAIL_ADDRESS   = os.environ.get("GMAIL_USER", "") or os.environ.get("GMAIL_ADDRESS", "")
+GMAIL_PASSWORD  = os.environ.get("GMAIL_PASS", "") or os.environ.get("GMAIL_APP_PASSWORD", "")
+EMAIL_TO        = os.environ.get("EMAIL_TO", "") or GMAIL_ADDRESS
 
 # ── Lighter クライアントは LIGHTER モード時のみ import ────────────
 lighter_client = None
@@ -98,7 +99,7 @@ def send_gmail(subject: str, body: str):
     try:
         msg = MIMEMultipart()
         msg["From"]    = GMAIL_ADDRESS
-        msg["To"]      = GMAIL_ADDRESS
+        msg["To"]      = EMAIL_TO
         msg["Subject"] = subject
         msg.attach(MIMEText(body, "plain", "utf-8"))
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
