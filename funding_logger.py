@@ -172,29 +172,6 @@ def main() -> None:
     print(f"  taker超え: {len(taker_hits)}銘柄  maker超え: {len(maker_hits)}銘柄")
     print(f"  → {CSV_PATH} に追記")
 
-    # ── MEXC HL共通銘柄 ────────────────────────────────
-    print("--- MEXC ---")
-    mexc_all = fetch_mexc_coins()
-    common   = sorted(hl_coins & mexc_all)
-    print(f"  HL×MEXC共通: {len(common)}銘柄 → 取得中...")
-    mexc_rows = fetch_mexc_funding(common)
-    if mexc_rows:
-        append_mexc_csv(mexc_rows, ts)
-        print(f"  取得成功: {len(mexc_rows)}銘柄")
-        # スプレッド上位5件表示
-        hl_map = {r["coin"]: r["funding_rate_1h"] for r in hl_rows}
-        spreads = []
-        for r in mexc_rows:
-            hl_r = hl_map.get(r["coin"], 0)
-            spreads.append((r["coin"], r["funding_rate_1h"], hl_r, r["funding_rate_1h"] - hl_r))
-        spreads.sort(key=lambda x: abs(x[3]), reverse=True)
-        print("  スプレッド上位5:")
-        for coin, mx, hl, sp in spreads[:5]:
-            print(f"    {coin:<10} MEXC={mx:+.5f}  HL={hl:+.5f}  spread={sp:+.5f}")
-        print(f"  → {MEXC_CSV_PATH} に追記")
-    else:
-        print("  → データ取得なし")
-
     # ── Lighter HL共通銘柄 ──────────────────────────────
     print("--- Lighter ---")
     try:

@@ -67,7 +67,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/funding_log.csv data/mexc_funding_log.csv images/dashboard.png
+          git add data/funding_log.csv images/dashboard.png
           [ -f data/lighter_funding_log.csv ] && git add data/lighter_funding_log.csv || true
           [ -f data/taker_state.json ] && git add data/taker_state.json || true
           [ -f data/pnl_snapshot.json ] && git add data/pnl_snapshot.json || true
