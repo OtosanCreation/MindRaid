@@ -963,7 +963,7 @@ def main():
                 f"現在net FR: {current_net_fr:+.4%}/h\n"
                 f"推定収益: ${est_fr:.2f} / net: ${net:.2f}\n"
                 f"{side_label}\n"
-                f"#MindRaid #FRArb #仮想通貨 #ClaudeCode"
+                f"#FRArb #仮想通貨"
             )
             send_gmail(
                 subject=f"[MindRaid] EXIT: {coin}  net ${net:.2f}",
@@ -1221,7 +1221,7 @@ def main():
             f"🟢 FR Arb エントリー #{coin}\n"
             f"方向: {side_label}\n"
             f"net FR: {avg_net_fr_1h:.4%}/h\n"
-            f"#MindRaid #FRArb #仮想通貨 #ClaudeCode"
+            f"#FRArb #仮想通貨"
         )
         send_gmail(
             subject=f"[MindRaid] ENTRY: {coin}  {side_label}",
