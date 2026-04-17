@@ -120,38 +120,54 @@
     </div>
   </div>
 
+  <div class="phase done">
+    <div class="phase-dot">✓</div>
+    <div class="phase-card">
+      <div class="phase-header">
+        <span class="phase-tag tag-done">DONE</span>
+        <span class="phase-title">Phase 4 ── HL × MEXC 自動売買</span>
+        <span class="phase-meta">4/10〜4/17</span>
+      </div>
+      <ul class="tasks">
+        <li class="done-task"><span class="icon">✓</span>taker_bot.py 実装（2回連続確認・双方向エントリー）</li>
+        <li class="done-task"><span class="icon">✓</span>スキャン間隔 30分（cron-job.org外部トリガー）</li>
+        <li class="done-task"><span class="icon">✓</span>HL × MEXC 両脚エントリー・自動決済ロジック</li>
+        <li class="done-task"><span class="icon">✓</span>Telegram通知（ポジション・PNL表示）</li>
+        <li class="done-task"><span class="icon">✓</span>ゴースト検知・force close フォールバック</li>
+        <li class="done-task"><span class="icon">✓</span>12日分データ蓄積 → バックテストで最適閾値算出</li>
+      </ul>
+      <div class="profit-box">
+        <div class="label">Phase 4 教訓</div>
+        <div class="value">MEXC往復手数料 0.17% が FR 収益を圧迫 → DEX 移行を決断</div>
+      </div>
+    </div>
+  </div>
+
   <div class="phase active">
     <div class="phase-dot">▶</div>
     <div class="phase-card">
       <div class="phase-header">
         <span class="phase-tag tag-active">NOW</span>
-        <span class="phase-title">Phase 4 ── 自動売買 稼働</span>
-        <span class="phase-meta">4/10〜</span>
+        <span class="phase-title">Phase 5 ── Lighter DEX 移行 &amp; 本番稼働</span>
+        <span class="phase-meta">4/17〜</span>
       </div>
       <ul class="tasks">
-        <li class="done-task"><span class="icon">✓</span>データ分析 → 229銘柄全スキャン・損益分岐算出（MIN_FR=0.10%/h）</li>
-        <li class="done-task"><span class="icon">✓</span>taker_bot.py 実装（2回連続確認 → HL SHORT × MEXC LONG 双方向対応）</li>
-        <li class="done-task"><span class="icon">✓</span>スキャン間隔 1h → 30分 に変更（cron-job.org外部トリガー）</li>
-        <li class="done-task"><span class="icon">✓</span>ETHポジション解消 → MEXC に $200 入金（USDT変換済み）</li>
-        <li class="done-task"><span class="icon">✓</span>バックテスト検証完了（6日 11戦全勝 / 2確認エントリーで勝率81.8%）</li>
-        <li class="done-task"><span class="icon">✓</span>実戦トライアル：バグ4種修正（double-entry / USDC→USDT / szDecimals / dangerポジション）</li>
-        <li class="done-task"><span class="icon">✓</span>HL × MEXC 両脚エントリー・自動決済ロジック確認済み</li>
-        <li class="done-task"><span class="icon">✓</span>Telegram通知にリアルタイムポジション表示（PNL付き）</li>
-        <li class="done-task"><span class="icon">✓</span>ゴーストポジション自動検知・クリーンアップ（実ポジション事前チェック）</li>
-        <li class="done-task"><span class="icon">✓</span>HL force close フォールバック（market_close失敗時 → IOC指値注文）</li>
-        <li class="done-task"><span class="icon">✓</span>MEXC PNL手動計算フォールバック（ccxt不具合対応）</li>
-        <li class="done-task"><span class="icon">✓</span>エントリー判定をCSV taker_okからFR値直接比較に修正</li>
-        <li class="done-task"><span class="icon">✓</span>GitHub Actions push競合修正（pull --rebase追加）</li>
-        <li class="active-task"><span class="icon">▸</span>taker_bot 本番稼働中（$90/ポジション × 最大2）</li>
-        <li class="active-task"><span class="icon">▸</span>全229銘柄FRデータ蓄積中（30分ごと）</li>
-        <li class="todo"><span class="icon">▸</span>1ヶ月後：銘柄別FR特性分析 → サイジング最適化</li>
-        <li class="todo"><span class="icon">▸</span>サイジング見直し（$90 → $300/pos、流動性確認後）</li>
-        <li class="todo"><span class="icon">▸</span>MAX_POSITIONS 2 → 4 に拡張（銘柄分散でリスク低減）</li>
-        <li class="todo"><span class="icon">▸</span>X 発信継続（実トレード実績の公開）</li>
+        <li class="done-task"><span class="icon">✓</span>Lighter DEX SDK 統合（lighter_client.py 実装）</li>
+        <li class="done-task"><span class="icon">✓</span>EXCHANGE_MODE で MEXC / Lighter 切替可能に</li>
+        <li class="done-task"><span class="icon">✓</span>taker_bot / funding_logger / telegram_alert を Lighter 対応</li>
+        <li class="done-task"><span class="icon">✓</span>Privy Embedded Wallet → MetaMask → Arbitrum Bridge 経由で入金</li>
+        <li class="done-task"><span class="icon">✓</span>Lighter 口座に $211 デポジット完了</li>
+        <li class="done-task"><span class="icon">✓</span>HL API Wallet (taker_bot) 発行・account_address 対応</li>
+        <li class="done-task"><span class="icon">✓</span>バックテスト最適化（MIN_FR=0.05%/h, confirm=2, max_hold=72h）</li>
+        <li class="done-task"><span class="icon">✓</span>MEXC ロギング停止（Lighter 専用運用へ）</li>
+        <li class="active-task"><span class="icon">▸</span>taker_bot 本番稼働中（$100/ポジション × 最大2）</li>
+        <li class="active-task"><span class="icon">▸</span>HL×Lighter 共通 92 銘柄 FR 蓄積中（30分ごと）</li>
+        <li class="todo"><span class="icon">▸</span>1〜2 週間データ蓄積 → Lighter 単独バックテスト再実行</li>
+        <li class="todo"><span class="icon">▸</span>サイジング拡大（$100 → $300/pos、MAX 2 → 4）</li>
       </ul>
       <div class="profit-box">
-        <div class="label">Phase 4 実績（2026-04-15時点）</div>
-        <div class="value">両脚エントリー確認済み / 30分自動スキャン稼働 / 決済フォールバック実装済み</div>
+        <div class="label">コスト比較（往復手数料）</div>
+        <div class="value">MEXC 0.17% → Lighter 0.07%（-59%）／ HL 側 0.09% は共通</div>
       </div>
     </div>
   </div>
@@ -161,21 +177,16 @@
     <div class="phase-card">
       <div class="phase-header">
         <span class="phase-tag tag-pending">FUTURE</span>
-        <span class="phase-title">Phase 5 ── 複数収益柱の確立</span>
+        <span class="phase-title">Phase 6 ── 複数収益柱の確立</span>
         <span class="phase-meta">Month 2〜3+</span>
       </div>
       <ul class="tasks">
-        <li class="todo"><span class="icon">▸</span>取引所間FRスプレッド裁定（HL × Bybit 両側受取）</li>
         <li class="todo"><span class="icon">▸</span>運用規模 $300/pos × 4銘柄 → 月$200〜500 ターゲット</li>
         <li class="todo"><span class="icon">▸</span>X フォロワー 500人 → 有料 Discord / note シグナル販売</li>
         <li class="todo"><span class="icon">▸</span>コードOSS化 → GitHub Sponsors / 受託</li>
         <li class="todo"><span class="icon">▸</span>X 広告収益（フォロワー数次第）</li>
       </ul>
-      <div class="profit-box">
-        <div class="label">現実的な収益試算（$300×4運用時）</div>
-        <div class="value">ボット: 月$200〜500 ／ シグナル販売: 月$100〜300（フォロワー次第）</div>
-      </div>
-      <div class="warn-box">⚠ FR裁定は流動性の壁あり。サイズ拡大は銘柄ごとにスリッページ検証必須</div>
+      <div class="warn-box">⚠ FR裁定は流動性の壁あり。Lighter 側の板厚も銘柄ごとに要検証</div>
     </div>
   </div>
 
@@ -186,15 +197,15 @@
   <div class="summary-grid">
     <div>
       <div class="s-label">フェーズ</div>
-      <div class="s-value">Phase 4 稼働中</div>
+      <div class="s-value">Phase 5 稼働中</div>
     </div>
     <div>
       <div class="s-label">運用資金</div>
-      <div class="s-value">HL $847 + MEXC $199</div>
+      <div class="s-value">HL $849 + Lighter $211</div>
     </div>
     <div>
       <div class="s-label">次のアクション</div>
-      <div class="s-value" style="font-size:0.9em;">データ蓄積 → 1ヶ月後サイジング拡大</div>
+      <div class="s-value" style="font-size:0.9em;">Lighter FR 蓄積 → 再バックテスト</div>
     </div>
   </div>
 </div>
