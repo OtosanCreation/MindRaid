@@ -162,8 +162,7 @@
         <li class="done-task"><span class="icon">✓</span>MEXC ロギング停止（Lighter 専用運用へ）</li>
         <li class="active-task"><span class="icon">▸</span>taker_bot 本番稼働中（$100/ポジション × 最大2）</li>
         <li class="active-task"><span class="icon">▸</span>HL×Lighter 共通 92 銘柄 FR 蓄積中（30分ごと）</li>
-        <li class="todo"><span class="icon">▸</span>1〜2 週間データ蓄積 → Lighter 単独バックテスト再実行</li>
-        <li class="todo"><span class="icon">▸</span>サイジング拡大（$100 → $300/pos、MAX 2 → 4）</li>
+        <li class="active-task"><span class="icon">▸</span>Gmail / Telegram / X の三重通知体制稼働</li>
       </ul>
       <div class="profit-box">
         <div class="label">コスト比較（往復手数料）</div>
@@ -176,17 +175,58 @@
     <div class="phase-dot"></div>
     <div class="phase-card">
       <div class="phase-header">
+        <span class="phase-tag tag-pending">NEXT</span>
+        <span class="phase-title">Phase 6 ── 観測 &amp; データ蓄積</span>
+        <span class="phase-meta">〜2週間（4/17〜5/1目安）</span>
+      </div>
+      <ul class="tasks">
+        <li class="todo"><span class="icon">▸</span>Lighter 単独 FR データ 1〜2 週間蓄積</li>
+        <li class="todo"><span class="icon">▸</span>実トレード記録（entry/exit FR・スリッページ・保有時間・net PnL）</li>
+        <li class="todo"><span class="icon">▸</span>週1レビュー（pnl_log.csv / taker_state.json 異常検知）</li>
+        <li class="todo"><span class="icon">▸</span>停止基準の明文化（例：週-3%DDで手動停止）</li>
+      </ul>
+      <div class="warn-box">⚠ この期間はパラメータを触らない（サンプル不足での最適化は過剰適合の温床）</div>
+    </div>
+  </div>
+
+  <div class="phase pending">
+    <div class="phase-dot"></div>
+    <div class="phase-card">
+      <div class="phase-header">
         <span class="phase-tag tag-pending">FUTURE</span>
-        <span class="phase-title">Phase 6 ── 複数収益柱の確立</span>
+        <span class="phase-title">Phase 7 ── 再最適化 &amp; 動的閾値</span>
+        <span class="phase-meta">2〜4週間後</span>
+      </div>
+      <ul class="tasks">
+        <li class="todo"><span class="icon">▸</span>Lighter 単独バックテスト → MIN_FR / confirm / max_hold 再検証</li>
+        <li class="todo"><span class="icon">▸</span>レジーム検知（HL全体FR中央値・ボラで閾値可変）</li>
+        <li class="todo"><span class="icon">▸</span>銘柄別サイジング（過去勝率・Lighter板厚で配分）</li>
+        <li class="todo"><span class="icon">▸</span>FR 大きさ連動ポジションサイズ（0.1%/h超は倍、0.05%/h付近は半分）</li>
+        <li class="todo"><span class="icon">▸</span>レバレッジ動的化（保有時間・相関実績を反映）</li>
+      </ul>
+      <div class="profit-box">
+        <div class="label">発動条件</div>
+        <div class="value">累積 PnL $100〜$500 達成後に着手（サンプル確保）</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="phase pending">
+    <div class="phase-dot"></div>
+    <div class="phase-card">
+      <div class="phase-header">
+        <span class="phase-tag tag-pending">FUTURE</span>
+        <span class="phase-title">Phase 8 ── 規模拡大 &amp; 複数収益柱</span>
         <span class="phase-meta">Month 2〜3+</span>
       </div>
       <ul class="tasks">
+        <li class="todo"><span class="icon">▸</span>サイジング拡大（$100 → $300/pos、MAX 2 → 4）</li>
         <li class="todo"><span class="icon">▸</span>運用規模 $300/pos × 4銘柄 → 月$200〜500 ターゲット</li>
         <li class="todo"><span class="icon">▸</span>X フォロワー 500人 → 有料 Discord / note シグナル販売</li>
         <li class="todo"><span class="icon">▸</span>コードOSS化 → GitHub Sponsors / 受託</li>
         <li class="todo"><span class="icon">▸</span>X 広告収益（フォロワー数次第）</li>
       </ul>
-      <div class="warn-box">⚠ FR裁定は流動性の壁あり。Lighter 側の板厚も銘柄ごとに要検証</div>
+      <div class="warn-box">⚠ サイズ拡大前に銘柄ごとの Lighter 板厚・スリッページ検証必須</div>
     </div>
   </div>
 
@@ -205,7 +245,7 @@
     </div>
     <div>
       <div class="s-label">次のアクション</div>
-      <div class="s-value" style="font-size:0.9em;">Lighter FR 蓄積 → 再バックテスト</div>
+      <div class="s-value" style="font-size:0.9em;">2週間観測 → 再最適化 → 動的閾値</div>
     </div>
   </div>
 </div>
