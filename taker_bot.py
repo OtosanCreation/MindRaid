@@ -39,9 +39,9 @@ except ImportError:
 
 # ── 設定 ────────────────────────────────────────────────────────
 EXCHANGE_MODE   = os.environ.get("EXCHANGE_MODE", "LIGHTER").upper()  # "LIGHTER" or "MEXC"
-TRADE_SIZE_USD  = float(os.environ.get("TRADE_SIZE_USD", "90"))   # 1ポジションUSDT
+TRADE_SIZE_USD  = float(os.environ.get("TRADE_SIZE_USD", "100"))  # 1ポジションUSD
 MAX_POSITIONS   = int(os.environ.get("MAX_POSITIONS", "2"))        # 最大同時ポジション数
-MIN_FR_1H       = 0.0010  # エントリー最小 net FR閾値: 0.10%/h（1時間換算）
+MIN_FR_1H       = 0.0005  # エントリー最小 net FR閾値: 0.05%/h（バックテストで最適値）
 EXIT_FR_1H      = 0.0002  # 決済 net FR閾値: 0.02%/h（コスト回収前）
 EXIT_FR_RECOVERED = 0.0001  # コスト回収済み後の決済閾値: 0.01%/h
 # MAX_ENTRY_SPREAD: LIGHTER では手数料0のため閾値を小さくしても良いが、
@@ -55,6 +55,7 @@ LIGHTER_FUNDING_CSV = os.path.join(DATA_DIR, "lighter_funding_log.csv")
 STATE_FILE   = os.path.join(DATA_DIR, "taker_state.json")
 
 HL_PRIVATE_KEY  = os.environ["HL_PRIVATE_KEY"]
+HL_WALLET_ADDRESS = os.environ.get("HL_WALLET_ADDRESS", "")  # メインウォレット（API Wallet 使用時に必須）
 # MEXC 鍵は MEXC モード時のみ必須（LIGHTER モード時は空でも可）
 MEXC_API_KEY    = os.environ.get("MEXC_API_KEY", "")
 MEXC_API_SECRET = os.environ.get("MEXC_API_SECRET", "")
@@ -674,13 +675,15 @@ def main():
 
     wallet   = Account.from_key(HL_PRIVATE_KEY)
     info     = Info(skip_ws=True)
-    exchange = Exchange(wallet)
+    # API Wallet 使用時は main wallet address を渡す（メインアカウントに対して発注するため）
+    main_addr = HL_WALLET_ADDRESS or wallet.address
+    exchange = Exchange(wallet, account_address=main_addr)
     counter_client = counter_init()   # Lighter は None, MEXC は ccxt client
     # 旧コード互換のため mexc 変数も残す（MEXC モード時のみ）
     mexc = counter_client if EXCHANGE_MODE == "MEXC" else None
 
     sz_decimals_map = get_sz_decimals(info)
-    hl_open_coins   = get_hl_open_coins(info, wallet.address)
+    hl_open_coins   = get_hl_open_coins(info, main_addr)
     if hl_open_coins is None:
         print("[ABORT] HL実ポジション取得失敗 → 安全のため全処理スキップ")
         tg("🚨 taker_bot ABORT: HL実ポジション取得失敗\n削除・エントリーを安全のためスキップしました")
@@ -737,7 +740,7 @@ def main():
                     break
                 except Exception as e:
                     print(f"  HL danger close attempt {attempt}/3: {e}")
-                    open_coins = get_hl_open_coins(info, wallet.address)
+                    open_coins = get_hl_open_coins(info, main_addr)
                     if open_coins is not None and coin not in open_coins:
                         print(f"  HL {coin} ポジション消滅確認 → 決済済みとみなす")
                         hl_ok = True
@@ -749,7 +752,7 @@ def main():
             # 3回失敗 → force_closeを最終手段として試行
             if not hl_ok:
                 try:
-                    hl_force_close(exchange, info, coin, wallet.address, sz_decimals_map)
+                    hl_force_close(exchange, info, coin, main_addr, sz_decimals_map)
                     print(f"  HL force close成功")
                     tg(f"⚠️ HL 強制決済実行: {coin}\nmarket_close 3回失敗のためIOC指値注文で強制クローズしました")
                     hl_ok = True
@@ -868,7 +871,7 @@ def main():
                     break
                 except Exception as e:
                     print(f"  HL close attempt {attempt}/3: {e}")
-                    open_coins = get_hl_open_coins(info, wallet.address)
+                    open_coins = get_hl_open_coins(info, main_addr)
                     if open_coins is not None and coin not in open_coins:
                         print(f"  HL {coin} ポジション消滅確認 → 決済済みとみなす")
                         hl_ok = True
@@ -880,7 +883,7 @@ def main():
             # 3回失敗 → force_closeを最終手段として試行
             if not hl_ok:
                 try:
-                    hl_force_close(exchange, info, coin, wallet.address, sz_decimals_map)
+                    hl_force_close(exchange, info, coin, main_addr, sz_decimals_map)
                     print(f"  HL force close成功")
                     tg(f"⚠️ HL 強制決済実行: {coin}\nmarket_close 3回失敗のためIOC指値注文で強制クローズしました")
                     hl_ok = True
@@ -1068,13 +1071,13 @@ def main():
             except Exception as re:
                 print(f"  HL rollback例外: {re}")
                 try:
-                    hl_force_close(exchange, info, coin, wallet.address, sz_decimals_map)
+                    hl_force_close(exchange, info, coin, main_addr, sz_decimals_map)
                     hl_rb_ok = True
                 except Exception as fe:
                     print(f"  HL force rollback失敗: {fe}")
             # API応答に関わらず実ポジションで確認
             import time as _time; _time.sleep(2)
-            hl_verify = get_hl_open_coins(info, wallet.address)
+            hl_verify = get_hl_open_coins(info, main_addr)
             if hl_verify is not None and coin in hl_verify:
                 hl_rb_ok = False
                 print(f"  [検証失敗] HL {coin} ポジションまだ残存")
@@ -1125,7 +1128,7 @@ def main():
             except Exception as e:
                 print(f"  HL rollback失敗: {e}")
                 try:
-                    hl_force_close(exchange, info, coin, wallet.address, sz_decimals_map)
+                    hl_force_close(exchange, info, coin, main_addr, sz_decimals_map)
                     hl_rb_ok = True
                 except Exception as fe:
                     print(f"  HL force rollback失敗: {fe}")
@@ -1145,7 +1148,7 @@ def main():
 
             # API応答に関わらず実ポジションで最終確認
             import time as _time2; _time2.sleep(2)
-            hl_verify2 = get_hl_open_coins(info, wallet.address)
+            hl_verify2 = get_hl_open_coins(info, main_addr)
             if hl_verify2 is not None and coin in hl_verify2:
                 hl_rb_ok = False
                 print(f"  [スプレッド検証失敗] HL {coin} ポジションまだ残存")

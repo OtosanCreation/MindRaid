@@ -1,0 +1,802 @@
+{
+  "XAU": {
+    "market_id": 92,
+    "min_base_amount": 0.003,
+    "supported_size_decimals": 4
+  },
+  "TAO": {
+    "market_id": 13,
+    "min_base_amount": 0.05,
+    "supported_size_decimals": 3
+  },
+  "MYX": {
+    "market_id": 80,
+    "min_base_amount": 0.4,
+    "supported_size_decimals": 2
+  },
+  "SYRUP": {
+    "market_id": 44,
+    "min_base_amount": 20.0,
+    "supported_size_decimals": 1
+  },
+  "WLD": {
+    "market_id": 6,
+    "min_base_amount": 5.0,
+    "supported_size_decimals": 1
+  },
+  "XLM": {
+    "market_id": 119,
+    "min_base_amount": 30.0,
+    "supported_size_decimals": 1
+  },
+  "TRX": {
+    "market_id": 43,
+    "min_base_amount": 40.0,
+    "supported_size_decimals": 1
+  },
+  "OP": {
+    "market_id": 55,
+    "min_base_amount": 10.0,
+    "supported_size_decimals": 1
+  },
+  "XAG": {
+    "market_id": 93,
+    "min_base_amount": 0.15,
+    "supported_size_decimals": 2
+  },
+  "USDKRW": {
+    "market_id": 105,
+    "min_base_amount": 0.005,
+    "supported_size_decimals": 4
+  },
+  "AMZN": {
+    "market_id": 114,
+    "min_base_amount": 0.05,
+    "supported_size_decimals": 3
+  },
+  "QQQ": {
+    "market_id": 129,
+    "min_base_amount": 0.01,
+    "supported_size_decimals": 4
+  },
+  "HANMI": {
+    "market_id": 148,
+    "min_base_amount": 3e-05,
+    "supported_size_decimals": 6
+  },
+  "SEI": {
+    "market_id": 32,
+    "min_base_amount": 50.0,
+    "supported_size_decimals": 1
+  },
+  "FOGO": {
+    "market_id": 124,
+    "min_base_amount": 200.0,
+    "supported_size_decimals": 0
+  },
+  "KAITO": {
+    "market_id": 33,
+    "min_base_amount": 10.0,
+    "supported_size_decimals": 1
+  },
+  "USDCHF": {
+    "market_id": 99,
+    "min_base_amount": 8.0,
+    "supported_size_decimals": 1
+  },
+  "AMD": {
+    "market_id": 138,
+    "min_base_amount": 0.03,
+    "supported_size_decimals": 4
+  },
+  "DASH": {
+    "market_id": 127,
+    "min_base_amount": 0.1,
+    "supported_size_decimals": 3
+  },
+  "SNDK": {
+    "market_id": 139,
+    "min_base_amount": 0.01,
+    "supported_size_decimals": 4
+  },
+  "ROBO": {
+    "market_id": 149,
+    "min_base_amount": 150.0,
+    "supported_size_decimals": 0
+  },
+  "HOOD": {
+    "market_id": 108,
+    "min_base_amount": 0.1,
+    "supported_size_decimals": 3
+  },
+  "BMNR": {
+    "market_id": 123,
+    "min_base_amount": 0.25,
+    "supported_size_decimals": 3
+  },
+  "ENA": {
+    "market_id": 29,
+    "min_base_amount": 20.0,
+    "supported_size_decimals": 1
+  },
+  "AAPL": {
+    "market_id": 113,
+    "min_base_amount": 0.05,
+    "supported_size_decimals": 3
+  },
+  "ZORA": {
+    "market_id": 53,
+    "min_base_amount": 100.0,
+    "supported_size_decimals": 0
+  },
+  "XPL": {
+    "market_id": 71,
+    "min_base_amount": 10.0,
+    "supported_size_decimals": 1
+  },
+  "APT": {
+    "market_id": 31,
+    "min_base_amount": 2.0,
+    "supported_size_decimals": 2
+  },
+  "ZEC": {
+    "market_id": 90,
+    "min_base_amount": 0.1,
+    "supported_size_decimals": 3
+  },
+  "SKHYNIXUSD": {
+    "market_id": 161,
+    "min_base_amount": 0.02,
+    "supported_size_decimals": 3
+  },
+  "SKHYNIX": {
+    "market_id": 143,
+    "min_base_amount": 1e-05,
+    "supported_size_decimals": 6
+  },
+  "TSLA": {
+    "market_id": 112,
+    "min_base_amount": 0.02,
+    "supported_size_decimals": 4
+  },
+  "APEX": {
+    "market_id": 86,
+    "min_base_amount": 5.0,
+    "supported_size_decimals": 1
+  },
+  "DIA": {
+    "market_id": 152,
+    "min_base_amount": 0.01,
+    "supported_size_decimals": 4
+  },
+  "HYUNDAI": {
+    "market_id": 141,
+    "min_base_amount": 1e-05,
+    "supported_size_decimals": 6
+  },
+  "MON": {
+    "market_id": 91,
+    "min_base_amount": 50.0,
+    "supported_size_decimals": 1
+  },
+  "CRCL": {
+    "market_id": 121,
+    "min_base_amount": 0.1,
+    "supported_size_decimals": 3
+  },
+  "GOOGL": {
+    "market_id": 116,
+    "min_base_amount": 0.03,
+    "supported_size_decimals": 4
+  },
+  "ETH": {
+    "market_id": 0,
+    "min_base_amount": 0.005,
+    "supported_size_decimals": 4
+  },
+  "TRUMP": {
+    "market_id": 15,
+    "min_base_amount": 0.2,
+    "supported_size_decimals": 2
+  },
+  "PAXG": {
+    "market_id": 48,
+    "min_base_amount": 0.0025,
+    "supported_size_decimals": 4
+  },
+  "1000TOSHI": {
+    "market_id": 81,
+    "min_base_amount": 1.0,
+    "supported_size_decimals": 2
+  },
+  "TON": {
+    "market_id": 12,
+    "min_base_amount": 2.0,
+    "supported_size_decimals": 1
+  },
+  "STRK": {
+    "market_id": 104,
+    "min_base_amount": 50.0,
+    "supported_size_decimals": 1
+  },
+  "TIA": {
+    "market_id": 67,
+    "min_base_amount": 3.0,
+    "supported_size_decimals": 1
+  },
+  "ETHFI": {
+    "market_id": 64,
+    "min_base_amount": 10.0,
+    "supported_size_decimals": 1
+  },
+  "POPCAT": {
+    "market_id": 23,
+    "min_base_amount": 40.0,
+    "supported_size_decimals": 1
+  },
+  "SPY": {
+    "market_id": 128,
+    "min_base_amount": 0.01,
+    "supported_size_decimals": 4
+  },
+  "DOGE": {
+    "market_id": 3,
+    "min_base_amount": 10.0,
+    "supported_size_decimals": 0
+  },
+  "EURUSD": {
+    "market_id": 96,
+    "min_base_amount": 10.0,
+    "supported_size_decimals": 1
+  },
+  "SKY": {
+    "market_id": 79,
+    "min_base_amount": 100.0,
+    "supported_size_decimals": 0
+  },
+  "ARC": {
+    "market_id": 132,
+    "min_base_amount": 80.0,
+    "supported_size_decimals": 0
+  },
+  "DOT": {
+    "market_id": 11,
+    "min_base_amount": 2.0,
+    "supported_size_decimals": 1
+  },
+  "1000SHIB": {
+    "market_id": 17,
+    "min_base_amount": 500.0,
+    "supported_size_decimals": 0
+  },
+  "PROVE": {
+    "market_id": 57,
+    "min_base_amount": 10.0,
+    "supported_size_decimals": 1
+  },
+  "AUDUSD": {
+    "market_id": 106,
+    "min_base_amount": 10.0,
+    "supported_size_decimals": 1
+  },
+  "RIVER": {
+    "market_id": 126,
+    "min_base_amount": 0.15,
+    "supported_size_decimals": 3
+  },
+  "LINK": {
+    "market_id": 8,
+    "min_base_amount": 1.0,
+    "supported_size_decimals": 1
+  },
+  "IWM": {
+    "market_id": 153,
+    "min_base_amount": 0.01,
+    "supported_size_decimals": 4
+  },
+  "STRC": {
+    "market_id": 156,
+    "min_base_amount": 0.05,
+    "supported_size_decimals": 3
+  },
+  "YZY": {
+    "market_id": 70,
+    "min_base_amount": 6.0,
+    "supported_size_decimals": 1
+  },
+  "ZK": {
+    "market_id": 56,
+    "min_base_amount": 100.0,
+    "supported_size_decimals": 0
+  },
+  "HBAR": {
+    "market_id": 59,
+    "min_base_amount": 20.0,
+    "supported_size_decimals": 1
+  },
+  "INTC": {
+    "market_id": 137,
+    "min_base_amount": 0.1,
+    "supported_size_decimals": 3
+  },
+  "PYTH": {
+    "market_id": 78,
+    "min_base_amount": 40.0,
+    "supported_size_decimals": 1
+  },
+  "PIPPIN": {
+    "market_id": 135,
+    "min_base_amount": 30.0,
+    "supported_size_decimals": 1
+  },
+  "XPT": {
+    "market_id": 147,
+    "min_base_amount": 0.003,
+    "supported_size_decimals": 5
+  },
+  "ICP": {
+    "market_id": 102,
+    "min_base_amount": 0.6,
+    "supported_size_decimals": 2
+  },
+  "FIL": {
+    "market_id": 103,
+    "min_base_amount": 5.0,
+    "supported_size_decimals": 1
+  },
+  "1000PEPE": {
+    "market_id": 4,
+    "min_base_amount": 500.0,
+    "supported_size_decimals": 0
+  },
+  "USDCAD": {
+    "market_id": 100,
+    "min_base_amount": 10.0,
+    "supported_size_decimals": 1
+  },
+  "POL": {
+    "market_id": 14,
+    "min_base_amount": 40.0,
+    "supported_size_decimals": 0
+  },
+  "AERO": {
+    "market_id": 65,
+    "min_base_amount": 10.0,
+    "supported_size_decimals": 1
+  },
+  "BCH": {
+    "market_id": 58,
+    "min_base_amount": 0.01,
+    "supported_size_decimals": 3
+  },
+  "VVV": {
+    "market_id": 69,
+    "min_base_amount": 3.0,
+    "supported_size_decimals": 2
+  },
+  "HYUNDAIUSD": {
+    "market_id": 160,
+    "min_base_amount": 0.02,
+    "supported_size_decimals": 3
+  },
+  "LDO": {
+    "market_id": 46,
+    "min_base_amount": 5.0,
+    "supported_size_decimals": 1
+  },
+  "AVAX": {
+    "market_id": 9,
+    "min_base_amount": 0.5,
+    "supported_size_decimals": 2
+  },
+  "SAMSUNG": {
+    "market_id": 140,
+    "min_base_amount": 4e-05,
+    "supported_size_decimals": 6
+  },
+  "XRP": {
+    "market_id": 7,
+    "min_base_amount": 20.0,
+    "supported_size_decimals": 0
+  },
+  "SUI": {
+    "market_id": 16,
+    "min_base_amount": 3.0,
+    "supported_size_decimals": 1
+  },
+  "BERA": {
+    "market_id": 20,
+    "min_base_amount": 3.0,
+    "supported_size_decimals": 1
+  },
+  "PENDLE": {
+    "market_id": 37,
+    "min_base_amount": 3.0,
+    "supported_size_decimals": 2
+  },
+  "SPX": {
+    "market_id": 42,
+    "min_base_amount": 5.0,
+    "supported_size_decimals": 1
+  },
+  "XPD": {
+    "market_id": 146,
+    "min_base_amount": 0.003,
+    "supported_size_decimals": 5
+  },
+  "USELESS": {
+    "market_id": 66,
+    "min_base_amount": 20.0,
+    "supported_size_decimals": 1
+  },
+  "MSTR": {
+    "market_id": 122,
+    "min_base_amount": 0.035,
+    "supported_size_decimals": 4
+  },
+  "WIF": {
+    "market_id": 5,
+    "min_base_amount": 5.0,
+    "supported_size_decimals": 1
+  },
+  "STBL": {
+    "market_id": 85,
+    "min_base_amount": 15.0,
+    "supported_size_decimals": 1
+  },
+  "1000FLOKI": {
+    "market_id": 19,
+    "min_base_amount": 100.0,
+    "supported_size_decimals": 0
+  },
+  "NATGAS": {
+    "market_id": 158,
+    "min_base_amount": 2.0,
+    "supported_size_decimals": 2
+  },
+  "SOL": {
+    "market_id": 2,
+    "min_base_amount": 0.05,
+    "supported_size_decimals": 3
+  },
+  "EDGE": {
+    "market_id": 157,
+    "min_base_amount": 10.0,
+    "supported_size_decimals": 1
+  },
+  "BTC": {
+    "market_id": 1,
+    "min_base_amount": 0.0002,
+    "supported_size_decimals": 5
+  },
+  "VIRTUAL": {
+    "market_id": 41,
+    "min_base_amount": 5.0,
+    "supported_size_decimals": 1
+  },
+  "DUSK": {
+    "market_id": 125,
+    "min_base_amount": 25.0,
+    "supported_size_decimals": 1
+  },
+  "PENGU": {
+    "market_id": 47,
+    "min_base_amount": 200.0,
+    "supported_size_decimals": 0
+  },
+  "NMR": {
+    "market_id": 74,
+    "min_base_amount": 0.5,
+    "supported_size_decimals": 2
+  },
+  "AXS": {
+    "market_id": 131,
+    "min_base_amount": 2.0,
+    "supported_size_decimals": 2
+  },
+  "DOLO": {
+    "market_id": 75,
+    "min_base_amount": 30.0,
+    "supported_size_decimals": 1
+  },
+  "AVNT": {
+    "market_id": 82,
+    "min_base_amount": 10.0,
+    "supported_size_decimals": 1
+  },
+  "NVDA": {
+    "market_id": 110,
+    "min_base_amount": 0.05,
+    "supported_size_decimals": 3
+  },
+  "JTO": {
+    "market_id": 134,
+    "min_base_amount": 20.0,
+    "supported_size_decimals": 1
+  },
+  "PUMP": {
+    "market_id": 45,
+    "min_base_amount": 2000.0,
+    "supported_size_decimals": 0
+  },
+  "ASML": {
+    "market_id": 151,
+    "min_base_amount": 0.004,
+    "supported_size_decimals": 5
+  },
+  "S": {
+    "market_id": 40,
+    "min_base_amount": 20.0,
+    "supported_size_decimals": 1
+  },
+  "META": {
+    "market_id": 117,
+    "min_base_amount": 0.02,
+    "supported_size_decimals": 4
+  },
+  "FF": {
+    "market_id": 87,
+    "min_base_amount": 15.0,
+    "supported_size_decimals": 1
+  },
+  "KRCOMP": {
+    "market_id": 142,
+    "min_base_amount": 0.0025,
+    "supported_size_decimals": 5
+  },
+  "AAVE": {
+    "market_id": 27,
+    "min_base_amount": 0.05,
+    "supported_size_decimals": 3
+  },
+  "WLFI": {
+    "market_id": 72,
+    "min_base_amount": 25.0,
+    "supported_size_decimals": 1
+  },
+  "LINEA": {
+    "market_id": 76,
+    "min_base_amount": 100.0,
+    "supported_size_decimals": 0
+  },
+  "2Z": {
+    "market_id": 88,
+    "min_base_amount": 15.0,
+    "supported_size_decimals": 1
+  },
+  "EIGEN": {
+    "market_id": 49,
+    "min_base_amount": 5.0,
+    "supported_size_decimals": 1
+  },
+  "MEGA": {
+    "market_id": 94,
+    "min_base_amount": 15.0,
+    "supported_size_decimals": 1
+  },
+  "MORPHO": {
+    "market_id": 68,
+    "min_base_amount": 3.0,
+    "supported_size_decimals": 1
+  },
+  "MAGS": {
+    "market_id": 155,
+    "min_base_amount": 0.1,
+    "supported_size_decimals": 3
+  },
+  "BRENTOIL": {
+    "market_id": 159,
+    "min_base_amount": 0.05,
+    "supported_size_decimals": 4
+  },
+  "NEAR": {
+    "market_id": 10,
+    "min_base_amount": 2.0,
+    "supported_size_decimals": 1
+  },
+  "COIN": {
+    "market_id": 109,
+    "min_base_amount": 0.025,
+    "supported_size_decimals": 3
+  },
+  "RESOLV": {
+    "market_id": 51,
+    "min_base_amount": 40.0,
+    "supported_size_decimals": 0
+  },
+  "DYDX": {
+    "market_id": 62,
+    "min_base_amount": 15.0,
+    "supported_size_decimals": 1
+  },
+  "MNT": {
+    "market_id": 63,
+    "min_base_amount": 10.0,
+    "supported_size_decimals": 1
+  },
+  "MET": {
+    "market_id": 95,
+    "min_base_amount": 15.0,
+    "supported_size_decimals": 1
+  },
+  "1000BONK": {
+    "market_id": 18,
+    "min_base_amount": 500.0,
+    "supported_size_decimals": 0
+  },
+  "LTC": {
+    "market_id": 35,
+    "min_base_amount": 0.1,
+    "supported_size_decimals": 3
+  },
+  "WTI": {
+    "market_id": 145,
+    "min_base_amount": 0.1,
+    "supported_size_decimals": 3
+  },
+  "ONDO": {
+    "market_id": 38,
+    "min_base_amount": 10.0,
+    "supported_size_decimals": 1
+  },
+  "CC": {
+    "market_id": 101,
+    "min_base_amount": 30.0,
+    "supported_size_decimals": 1
+  },
+  "GBPUSD": {
+    "market_id": 97,
+    "min_base_amount": 10.0,
+    "supported_size_decimals": 1
+  },
+  "XMR": {
+    "market_id": 77,
+    "min_base_amount": 0.02,
+    "supported_size_decimals": 3
+  },
+  "BOTZ": {
+    "market_id": 154,
+    "min_base_amount": 0.15,
+    "supported_size_decimals": 3
+  },
+  "STABLE": {
+    "market_id": 118,
+    "min_base_amount": 300.0,
+    "supported_size_decimals": 0
+  },
+  "FARTCOIN": {
+    "market_id": 21,
+    "min_base_amount": 20.0,
+    "supported_size_decimals": 1
+  },
+  "JUP": {
+    "market_id": 26,
+    "min_base_amount": 15.0,
+    "supported_size_decimals": 1
+  },
+  "SKR": {
+    "market_id": 130,
+    "min_base_amount": 200.0,
+    "supported_size_decimals": 0
+  },
+  "PLTR": {
+    "market_id": 111,
+    "min_base_amount": 0.05,
+    "supported_size_decimals": 3
+  },
+  "NZDUSD": {
+    "market_id": 107,
+    "min_base_amount": 10.0,
+    "supported_size_decimals": 1
+  },
+  "0G": {
+    "market_id": 84,
+    "min_base_amount": 1.0,
+    "supported_size_decimals": 2
+  },
+  "MSFT": {
+    "market_id": 115,
+    "min_base_amount": 0.02,
+    "supported_size_decimals": 4
+  },
+  "ZRO": {
+    "market_id": 60,
+    "min_base_amount": 3.0,
+    "supported_size_decimals": 1
+  },
+  "UNI": {
+    "market_id": 30,
+    "min_base_amount": 1.0,
+    "supported_size_decimals": 2
+  },
+  "XCU": {
+    "market_id": 136,
+    "min_base_amount": 1.0,
+    "supported_size_decimals": 2
+  },
+  "HYPE": {
+    "market_id": 24,
+    "min_base_amount": 0.5,
+    "supported_size_decimals": 2
+  },
+  "SAMSUNGUSD": {
+    "market_id": 162,
+    "min_base_amount": 0.05,
+    "supported_size_decimals": 3
+  },
+  "CRV": {
+    "market_id": 36,
+    "min_base_amount": 20.0,
+    "supported_size_decimals": 1
+  },
+  "CRO": {
+    "market_id": 73,
+    "min_base_amount": 20.0,
+    "supported_size_decimals": 1
+  },
+  "IP": {
+    "market_id": 34,
+    "min_base_amount": 2.0,
+    "supported_size_decimals": 2
+  },
+  "BNB": {
+    "market_id": 25,
+    "min_base_amount": 0.02,
+    "supported_size_decimals": 2
+  },
+  "EDEN": {
+    "market_id": 89,
+    "min_base_amount": 15.0,
+    "supported_size_decimals": 1
+  },
+  "AZTEC": {
+    "market_id": 144,
+    "min_base_amount": 400.0,
+    "supported_size_decimals": 0
+  },
+  "LIT": {
+    "market_id": 120,
+    "min_base_amount": 2.0,
+    "supported_size_decimals": 2
+  },
+  "GMX": {
+    "market_id": 61,
+    "min_base_amount": 0.3,
+    "supported_size_decimals": 2
+  },
+  "ASTER": {
+    "market_id": 83,
+    "min_base_amount": 20.0,
+    "supported_size_decimals": 1
+  },
+  "ADA": {
+    "market_id": 39,
+    "min_base_amount": 10.0,
+    "supported_size_decimals": 1
+  },
+  "GRASS": {
+    "market_id": 52,
+    "min_base_amount": 10.0,
+    "supported_size_decimals": 1
+  },
+  "ARB": {
+    "market_id": 50,
+    "min_base_amount": 20.0,
+    "supported_size_decimals": 1
+  },
+  "URA": {
+    "market_id": 150,
+    "min_base_amount": 0.1,
+    "supported_size_decimals": 3
+  },
+  "BIRB": {
+    "market_id": 133,
+    "min_base_amount": 25.0,
+    "supported_size_decimals": 1
+  },
+  "USDJPY": {
+    "market_id": 98,
+    "min_base_amount": 0.05,
+    "supported_size_decimals": 3
+  }
+}

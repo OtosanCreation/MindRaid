@@ -38,6 +38,7 @@ jobs:
         continue-on-error: true
         env:
           HL_PRIVATE_KEY: ${{ secrets.HL_PRIVATE_KEY }}
+          HL_WALLET_ADDRESS: ${{ secrets.HL_WALLET_ADDRESS }}
           LIGHTER_API_PRIVATE_KEY: ${{ secrets.LIGHTER_API_PRIVATE_KEY }}
           LIGHTER_ACCOUNT_INDEX: ${{ secrets.LIGHTER_ACCOUNT_INDEX }}
           EXCHANGE_MODE: ${{ secrets.EXCHANGE_MODE }}
