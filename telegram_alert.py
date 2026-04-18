@@ -325,7 +325,7 @@ def build_message(rows, now_str, hl_positions=None, counter_positions=None, net_
 
     lines = [
         f"<b>⚡ MindRaid Alert</b>  {now_str} UTC",
-        f"Hyperliquid {len(rows)}銘柄 | MAKER超え: {maker_total}銘柄 | "
+        f"対象 {len(rows)}銘柄 (HL∩Lighter) | MAKER超え: {maker_total}銘柄 | "
         f"エントリー判定: net FR (HL-{COUNTER_NAME}) ≥ {ENTRY_FR*100:.2f}%/h",
         f"🖥 <i>取引エンジン: ローカル運用中（GitHubはデータ収集のみ）</i>",
         "",
@@ -438,6 +438,18 @@ def main():
     print("Fetching funding data …")
     info = Info(skip_ws=True)
     rows = fetch_data(info)
+
+    # Lighter 未対応銘柄を除外（ヘッジ不可＝取引対象外）
+    if EXCHANGE_MODE == "LIGHTER":
+        try:
+            import lighter_client
+            lighter_markets = lighter_client.get_markets() or {}
+            before = len(rows)
+            rows = [r for r in rows if r["coin"] in lighter_markets]
+            print(f"[filter] Lighter対応銘柄のみに絞り込み: {before} → {len(rows)}")
+        except Exception as e:
+            print(f"[WARN] Lighter market 取得失敗、フィルタ無し: {e}")
+
     net_rates = load_latest_net_rates()
 
     hl_address = os.environ.get("HL_WALLET_ADDRESS", "")
