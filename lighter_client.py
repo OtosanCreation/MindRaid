@@ -296,7 +296,7 @@ def place_order(
         )
 
         # best price を取得して USD → コイン数を計算
-        best_price = client.get_best_price(market_id=market_id, is_ask=is_ask)
+        best_price = client.get_best_price(market_index=market_id, is_ask=is_ask)
         price_float = best_price / 1e6   # Lighter は price を 1e6 スケールで保持
 
         size_coin = size_usd / price_float
