@@ -327,6 +327,7 @@ def build_message(rows, now_str, hl_positions=None, counter_positions=None, net_
         f"<b>⚡ MindRaid Alert</b>  {now_str} UTC",
         f"Hyperliquid {len(rows)}銘柄 | MAKER超え: {maker_total}銘柄 | "
         f"エントリー判定: net FR (HL-{COUNTER_NAME}) ≥ {ENTRY_FR*100:.2f}%/h",
+        f"🖥 <i>取引エンジン: ローカル運用中（GitHubはデータ収集のみ）</i>",
         "",
     ]
 

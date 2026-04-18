@@ -34,26 +34,8 @@ jobs:
       - name: Generate dashboard image
         run: python generate_image.py
 
-      - name: Run taker bot
-        continue-on-error: true
-        env:
-          HL_PRIVATE_KEY: ${{ secrets.HL_PRIVATE_KEY }}
-          HL_WALLET_ADDRESS: ${{ secrets.HL_WALLET_ADDRESS }}
-          LIGHTER_API_PRIVATE_KEY: ${{ secrets.LIGHTER_API_PRIVATE_KEY }}
-          LIGHTER_ACCOUNT_INDEX: ${{ secrets.LIGHTER_ACCOUNT_INDEX }}
-          EXCHANGE_MODE: ${{ secrets.EXCHANGE_MODE }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          X_API_KEY: ${{ secrets.X_API_KEY }}
-          X_API_SECRET: ${{ secrets.X_API_SECRET }}
-          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
-          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
-          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
-          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-          GMAIL_USER: ${{ secrets.GMAIL_USER }}
-          GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
-          EMAIL_TO: ${{ secrets.EMAIL_TO }}
-        run: python taker_bot.py
+      # taker_bot はローカル launchd で30分毎に実行（Lighter が GitHub の US IP を地理ブロックするため）
+      # GitHub Actions ではデータ収集とサマリ通知のみ
 
       - name: Send Telegram alert
         continue-on-error: true
