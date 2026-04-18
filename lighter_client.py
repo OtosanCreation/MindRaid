@@ -296,12 +296,16 @@ def place_order(
         )
 
         # best price を取得して USD → コイン数を計算
-        best_price = client.get_best_price(market_index=market_id, is_ask=is_ask)
+        best_price = await client.get_best_price(market_index=market_id, is_ask=is_ask)
         price_float = best_price / 1e6   # Lighter は price を 1e6 スケールで保持
 
         size_coin = size_usd / price_float
         size_coin = max(size_coin, min_base)
         size_coin = round(size_coin, decimals)
+
+        # base_amount は整数コイン数（empirical: *10**decimals を掛けると10倍オーバー）
+        # max_slippage は小数（SDK source: ideal_price * (1 + max_slippage * sign)）
+        base_amount_int = max(int(round(size_coin)), 1)
 
         # client_order_index は時刻ベースのユニーク ID
         client_order_index = int(time.time() * 1000) % (2**31)
@@ -309,7 +313,7 @@ def place_order(
         _, resp, err = await client.create_market_order_limited_slippage(
             market_index=market_id,
             client_order_index=client_order_index,
-            base_amount=size_coin,
+            base_amount=base_amount_int,
             max_slippage=max_slippage,
             is_ask=is_ask,
         )
@@ -340,6 +344,9 @@ def close_position(symbol: str, side: str, size_coin: float) -> Optional[dict]:
         if market_id is None:
             raise ValueError(f"マーケットが見つかりません: {symbol}")
 
+        markets = get_markets()
+        decimals = markets[symbol]["supported_size_decimals"]
+
         is_ask = (side == "sell")
 
         api_priv = _get_api_private_key()
@@ -351,11 +358,13 @@ def close_position(symbol: str, side: str, size_coin: float) -> Optional[dict]:
 
         client_order_index = int(time.time() * 1000) % (2**31)
 
+        base_amount_int = max(int(round(size_coin)), 1)
+
         _, resp, err = await client.create_market_order_limited_slippage(
             market_index=market_id,
             client_order_index=client_order_index,
-            base_amount=size_coin,
-            max_slippage=0.005,   # クローズは少し広め
+            base_amount=base_amount_int,
+            max_slippage=0.005,  # 0.5% 小数で渡す
             is_ask=is_ask,
             reduce_only=True,
         )
