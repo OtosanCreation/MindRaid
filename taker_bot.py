@@ -118,6 +118,44 @@ def fetch_lighter_actual_funding(coin: str, opened_at_utc: str, closed_at_utc: s
         return 0.0
 
 
+def check_losing_streak(state: dict, tg_func, n: int = 3) -> None:
+    """trades.csv の末尾 n 件が全て est_net_usd < 0 なら Telegram で通知。
+    同じ末尾 trade_id で二重通知しないよう state に記録。"""
+    try:
+        if not os.path.exists(TRADES_CSV):
+            return
+        with open(TRADES_CSV) as f:
+            rows = list(csv.DictReader(f))
+        if len(rows) < n:
+            return
+        last = rows[-n:]
+        nets = []
+        for r in last:
+            v = r.get("est_net_usd", "")
+            if v == "" or v is None:
+                return  # 不完全データはスキップ
+            try:
+                nets.append(float(v))
+            except ValueError:
+                return
+        if all(net < 0 for net in nets):
+            last_id = last[-1]["trade_id"]
+            if state.get("last_streak_alert_trade_id") == last_id:
+                return  # すでに通知済み
+            total_loss = sum(nets)
+            msg_lines = [f"⚠️ {n}連敗検知！"]
+            for r, net in zip(last, nets):
+                msg_lines.append(f"  {r['coin']} {r['direction']}  net=${net:+.3f}  ({r['duration_h']}h)")
+            msg_lines.append(f"合計: ${total_loss:+.3f}")
+            msg_lines.append("パラメータ見直しを検討してください（閾値/サイズ/銘柄除外等）")
+            tg_func("\n".join(msg_lines))
+            state["last_streak_alert_trade_id"] = last_id
+            save_state(state)
+            print(f"  [streak] {n}連敗通知送信: 合計 ${total_loss:+.3f}")
+    except Exception as e:
+        print(f"[WARN] 連敗チェック失敗: {e}")
+
+
 def log_trade_record(pos: dict, coin: str, closed_at: str, duration_h: float,
                      exit_hl_fr: float, exit_counter_fr: float, exit_net_fr: float,
                      est_funding: float, est_cost: float, est_net: float,
@@ -1085,6 +1123,9 @@ def main():
 
             del positions[coin]
             save_state(state)
+
+            # 3連敗チェック（同じ末尾 trade_id では二重通知しない）
+            check_losing_streak(state, tg, n=3)
 
             tg(
                 f"🔴 EXIT: {coin}\n"
