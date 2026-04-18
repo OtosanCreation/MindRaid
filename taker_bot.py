@@ -41,7 +41,7 @@ except ImportError:
 EXCHANGE_MODE   = os.environ.get("EXCHANGE_MODE", "LIGHTER").upper()  # "LIGHTER" or "MEXC"
 TRADE_SIZE_USD  = float(os.environ.get("TRADE_SIZE_USD", "100"))  # 1ポジションUSD
 MAX_POSITIONS   = int(os.environ.get("MAX_POSITIONS", "2"))        # 最大同時ポジション数
-MIN_FR_1H       = 0.0005  # エントリー最小 net FR閾値: 0.05%/h（バックテストで最適値）
+MIN_FR_1H       = 0.0004  # エントリー最小 net FR閾値: 0.04%/h（BE=1.75h @ Lighter 0.07%往復）
 EXIT_FR_1H      = 0.0002  # 決済 net FR閾値: 0.02%/h（コスト回収前）
 EXIT_FR_RECOVERED = 0.0001  # コスト回収済み後の決済閾値: 0.01%/h
 # MAX_ENTRY_SPREAD: LIGHTER では手数料0のため閾値を小さくしても良いが、

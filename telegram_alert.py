@@ -202,7 +202,7 @@ def build_position_section(hl_positions: list, counter_positions: list) -> list:
 
 TAKER_RT     = 0.00035 * 2   # 0.070%
 MAKER_RT     = 0.00010 * 2   # 0.020%
-ENTRY_FR     = 0.0005         # エントリー閾値: 0.05%/h
+ENTRY_FR     = 0.0004         # エントリー閾値: 0.04%/h
 EXCHANGE_MODE = os.environ.get("EXCHANGE_MODE", "LIGHTER").upper()
 DATA_DIR     = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 HL_FUNDING_CSV      = os.path.join(DATA_DIR, "funding_log.csv")
