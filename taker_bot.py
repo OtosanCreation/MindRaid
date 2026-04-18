@@ -63,14 +63,67 @@ TRADE_FIELDS = [
     "entry_hl_px", "entry_counter_px", "entry_spread",
     "exit_hl_fr_1h", "exit_counter_fr_1h", "exit_net_fr_1h",
     "est_funding_usd", "est_cost_usd", "est_net_usd",
+    "actual_hl_funding_usd", "actual_lighter_funding_usd", "actual_total_funding_usd",
     "exit_reason",
 ]
+
+
+def fetch_hl_actual_funding(info, main_addr: str, coin: str, opened_at_utc: str, closed_at_utc: str) -> float:
+    """HL の userFunding API から期間内の実 funding 受取額（USD）を取得。"""
+    try:
+        start_ms = int(datetime.strptime(opened_at_utc, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc).timestamp() * 1000)
+        end_ms   = int(datetime.strptime(closed_at_utc, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc).timestamp() * 1000)
+        data = info.post("/info", {"type": "userFunding", "user": main_addr, "startTime": start_ms, "endTime": end_ms})
+        total = 0.0
+        for item in data or []:
+            d = item.get("delta", {})
+            if d.get("type") == "funding" and d.get("coin") == coin:
+                total += float(d.get("usdc", 0))
+        return total
+    except Exception as e:
+        print(f"[WARN] HL 実 funding 取得失敗: {e}")
+        return 0.0
+
+
+def fetch_lighter_actual_funding(coin: str, opened_at_utc: str, closed_at_utc: str,
+                                  size_usd: float, direction: str) -> float:
+    """
+    Lighter は per-account funding 履歴 API がないので、
+    lighter_funding_log.csv から期間内の FR を合計して USD 換算で推定する。
+    """
+    try:
+        start = datetime.strptime(opened_at_utc, "%Y-%m-%d %H:%M:%S")
+        end   = datetime.strptime(closed_at_utc, "%Y-%m-%d %H:%M:%S")
+        total_fr_accum = 0.0  # 期間内 FR の累計（時間加重平均 × 保有時間相当）
+        sample_count = 0
+        with open(LIGHTER_FUNDING_CSV) as f:
+            for row in csv.DictReader(f):
+                ts = datetime.strptime(row["timestamp_utc"], "%Y-%m-%d %H:%M:%S")
+                if start <= ts <= end and row["coin"] == coin:
+                    total_fr_accum += float(row["funding_rate_1h"])
+                    sample_count += 1
+        if sample_count == 0:
+            return 0.0
+        # スキャン間隔は約 30 分 = 0.5 時間
+        avg_fr = total_fr_accum / sample_count
+        duration_h = (end - start).total_seconds() / 3600
+        # direction: short_fr = HL SHORT × Lighter LONG
+        #   → Lighter long は FR 正で「払う」（FR 負で受取）
+        # direction: long_fr  = HL LONG × Lighter SHORT
+        #   → Lighter short は FR 正で「受取」
+        sign = -1 if direction == "short_fr" else 1
+        return avg_fr * duration_h * size_usd * sign
+    except Exception as e:
+        print(f"[WARN] Lighter 実 funding 計算失敗: {e}")
+        return 0.0
 
 
 def log_trade_record(pos: dict, coin: str, closed_at: str, duration_h: float,
                      exit_hl_fr: float, exit_counter_fr: float, exit_net_fr: float,
                      est_funding: float, est_cost: float, est_net: float,
-                     exit_reason: str):
+                     exit_reason: str,
+                     actual_hl_funding: float = None,
+                     actual_lighter_funding: float = None):
     """確定したトレードを data/trades.csv に1行追記する（FB用ログ）。"""
     try:
         os.makedirs(DATA_DIR, exist_ok=True)
@@ -98,6 +151,12 @@ def log_trade_record(pos: dict, coin: str, closed_at: str, duration_h: float,
             "est_funding_usd":     round(est_funding, 4) if est_funding is not None else "",
             "est_cost_usd":        round(est_cost, 4) if est_cost is not None else "",
             "est_net_usd":         round(est_net, 4) if est_net is not None else "",
+            "actual_hl_funding_usd":     round(actual_hl_funding, 4) if actual_hl_funding is not None else "",
+            "actual_lighter_funding_usd": round(actual_lighter_funding, 4) if actual_lighter_funding is not None else "",
+            "actual_total_funding_usd":  (
+                round((actual_hl_funding or 0) + (actual_lighter_funding or 0), 4)
+                if (actual_hl_funding is not None or actual_lighter_funding is not None) else ""
+            ),
             "exit_reason":         exit_reason,
         }
         with open(TRADES_CSV, "a", newline="") as f:
@@ -1006,11 +1065,22 @@ def main():
             est_cost = cost
             net      = est_fr - est_cost
 
+            # 実 funding 取得（HL は API、Lighter は CSV から推算）
+            actual_hl_fund = fetch_hl_actual_funding(
+                info, main_addr, coin, pos.get("opened_at", ""), ts
+            )
+            actual_lt_fund = fetch_lighter_actual_funding(
+                coin, pos.get("opened_at", ""), ts,
+                pos.get("size_usd", TRADE_SIZE_USD), pos.get("direction", "short_fr")
+            ) if pos.get("exchange") == "lighter" else None
+
             log_trade_record(
                 pos, coin, ts, dur_h,
                 exit_hl_fr=hl_fr_now, exit_counter_fr=counter_fr_now, exit_net_fr=current_net_fr,
                 est_funding=est_fr, est_cost=est_cost, est_net=net,
                 exit_reason="normal",
+                actual_hl_funding=actual_hl_fund,
+                actual_lighter_funding=actual_lt_fund,
             )
 
             del positions[coin]

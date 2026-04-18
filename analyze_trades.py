@@ -103,9 +103,19 @@ def main():
     for t in trades[-10:]:
         dur = to_float(t["duration_h"])
         net = to_float(t["est_net_usd"])
+        act = to_float(t.get("actual_total_funding_usd", ""))
         efr = to_float(t["entry_net_fr_1h"]) * 100
+        act_str = f" 実funding=${act:+.3f}" if t.get("actual_total_funding_usd") else ""
         print(f"  {t['opened_at_utc']:<20} {t['coin']:<8} {t['direction']:<10} "
-              f"entry_net={efr:+.4f}%/h  dur={dur:.1f}h  net=${net:+.3f}  ({t['exit_reason']})")
+              f"entry_net={efr:+.4f}%/h  dur={dur:.1f}h  est_net=${net:+.3f}{act_str}  ({t['exit_reason']})")
+
+    # 推定精度（est_funding vs actual_funding）
+    pairs = [(to_float(t["est_funding_usd"]), to_float(t.get("actual_total_funding_usd","")))
+             for t in trades if t.get("actual_total_funding_usd") and t["est_funding_usd"]]
+    if pairs:
+        diffs = [a - e for e, a in pairs]
+        print(f"\n[推定精度] N={len(pairs)}  est→actual 差分 平均=${statistics.mean(diffs):+.4f}  "
+              f"中央値=${statistics.median(diffs):+.4f}")
 
 
 if __name__ == "__main__":
