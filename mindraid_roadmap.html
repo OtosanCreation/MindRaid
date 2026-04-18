@@ -53,8 +53,8 @@
 <div class="header">
   <h1>⚡ MindRaid</h1>
   <p>非エンジニアが Claude Code で作る アービトラージシステム</p>
-  <p style="color:#444;margin-top:6px;font-size:0.8em;">2026-04-14 更新</p>
-  <p style="color:#f5a623;margin-top:4px;font-size:0.75em;">Phase 4 進行中 — HL × MEXC 両脚エントリー確認済み / 30分スキャン稼働中</p>
+  <p style="color:#444;margin-top:6px;font-size:0.8em;">2026-04-18 更新</p>
+  <p style="color:#f5a623;margin-top:4px;font-size:0.75em;">Phase 5 本番稼働 — HL × Lighter DEX / $90/pos × 最大2 / ローカルCron 30分スキャン</p>
 </div>
 
 <div class="timeline">
@@ -160,13 +160,19 @@
         <li class="done-task"><span class="icon">✓</span>HL API Wallet (taker_bot) 発行・account_address 対応</li>
         <li class="done-task"><span class="icon">✓</span>バックテスト最適化（MIN_FR=0.05%/h, confirm=2, max_hold=72h）</li>
         <li class="done-task"><span class="icon">✓</span>MEXC ロギング停止（Lighter 専用運用へ）</li>
-        <li class="active-task"><span class="icon">▸</span>taker_bot 本番稼働中（$100/ポジション × 最大2）</li>
-        <li class="active-task"><span class="icon">▸</span>HL×Lighter 共通 92 銘柄 FR 蓄積中（30分ごと）</li>
-        <li class="active-task"><span class="icon">▸</span>Gmail / Telegram / X の三重通知体制稼働</li>
+        <li class="done-task"><span class="icon">✓</span>価格スケール・base_amount スケールバグ修正（銘柄ごとの price_decimals / size_decimals 対応）</li>
+        <li class="done-task"><span class="icon">✓</span>スプレッド判定を abs() で双方向チェック（異常価格による誤エントリー防御）</li>
+        <li class="done-task"><span class="icon">✓</span>GitHub Actions の Lighter ジオブロック問題解決 → ローカル launchd に移行</li>
+        <li class="done-task"><span class="icon">✓</span>trades.csv トレード履歴記録 + HL実 funding API 取得（FB ループ基盤）</li>
+        <li class="done-task"><span class="icon">✓</span>3連敗検知 → Telegram 自動通知</li>
+        <li class="done-task"><span class="icon">✓</span>Telegram FR サマリーを Lighter 対応銘柄のみに絞り込み（net不明 排除）</li>
+        <li class="active-task"><span class="icon">▸</span>taker_bot 本番稼働中（$90/ポジション × 最大2 / MIN_FR=0.04%/h）</li>
+        <li class="active-task"><span class="icon">▸</span>HL×Lighter 共通 160 銘柄 FR 蓄積中（30分ごと）</li>
+        <li class="active-task"><span class="icon">▸</span>Gmail / Telegram の通知体制稼働（取引完了・3連敗アラート）</li>
       </ul>
       <div class="profit-box">
         <div class="label">コスト比較（往復手数料）</div>
-        <div class="value">MEXC 0.17% → Lighter 0.07%（-59%）／ HL 側 0.09% は共通</div>
+        <div class="value">MEXC 0.17% → Lighter 0.07%（-59%）／ MIN_FR 0.05%→0.04%/h に緩和</div>
       </div>
     </div>
   </div>
@@ -180,10 +186,10 @@
         <span class="phase-meta">〜2週間（4/17〜5/1目安）</span>
       </div>
       <ul class="tasks">
-        <li class="todo"><span class="icon">▸</span>Lighter 単独 FR データ 1〜2 週間蓄積</li>
-        <li class="todo"><span class="icon">▸</span>実トレード記録（entry/exit FR・スリッページ・保有時間・net PnL）</li>
-        <li class="todo"><span class="icon">▸</span>週1レビュー（pnl_log.csv / taker_state.json 異常検知）</li>
-        <li class="todo"><span class="icon">▸</span>停止基準の明文化（例：週-3%DDで手動停止）</li>
+        <li class="todo"><span class="icon">▸</span>N=30件 トレード蓄積（trades.csv）</li>
+        <li class="todo"><span class="icon">▸</span>analyze_trades.py で entry_net_fr バケット別勝率・推定精度レビュー</li>
+        <li class="todo"><span class="icon">▸</span>analyze_trades.py → グラフ・レポート化（analyze_report.py）</li>
+        <li class="todo"><span class="icon">▸</span>停止基準の確認（3連敗通知 / 週-3% DD で手動停止）</li>
       </ul>
       <div class="warn-box">⚠ この期間はパラメータを触らない（サンプル不足での最適化は過剰適合の温床）</div>
     </div>
@@ -241,7 +247,7 @@
     </div>
     <div>
       <div class="s-label">運用資金</div>
-      <div class="s-value">HL $849 + Lighter $211</div>
+      <div class="s-value">HL $849 + Lighter ~$204</div>
     </div>
     <div>
       <div class="s-label">次のアクション</div>
