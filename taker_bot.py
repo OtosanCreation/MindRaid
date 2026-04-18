@@ -1110,7 +1110,8 @@ def main():
         spread_pct = unfavorable_ratio * 100
         print(f"  スプレッド: HL={hl_px} {counter_name_enter}={ct_px} 不利側={spread_pct:+.4f}%")
 
-        if unfavorable_ratio > MAX_ENTRY_SPREAD:
+        # abs() でどちら向きの異常スプレッドも弾く（価格スケールバグ等のデータエラー防御）
+        if abs(unfavorable_ratio) > MAX_ENTRY_SPREAD:
             print(f"  [ROLLBACK] スプレッド過大 ({spread_pct:.4f}% > {MAX_ENTRY_SPREAD*100:.2f}%) → 両脚クローズ")
             tg(
                 f"⚠️ ENTRY 見送り: {coin}\n"
