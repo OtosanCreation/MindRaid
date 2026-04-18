@@ -157,47 +157,134 @@ def fetch_lighter_positions() -> list:
         return []
 
 
-def build_position_section(hl_positions: list, counter_positions: list) -> list:
+HL_COST_RT   = 0.00035 * 2   # HL taker 往復 0.07%（open + close）
+LIGHTER_COST_RT = 0.0         # Lighter は maker = 0%
+
+
+def load_taker_state() -> dict:
+    """data/taker_state.json から保有ポジション情報を読む。"""
+    path = os.path.join(DATA_DIR, "taker_state.json")
+    try:
+        if os.path.exists(path):
+            with open(path) as f:
+                return json.load(f).get("positions", {})
+    except Exception:
+        pass
+    return {}
+
+
+def calc_position_stats(state_pos: dict, now: datetime) -> dict:
+    """
+    1ポジション分の損益・BE を計算。
+    state_pos: taker_state.json の 1エントリー
+    now: UTC datetime
+    返却:
+      hours_held, est_funding_usd, total_cost_usd, est_net_usd,
+      be_hours, be_eta_str, be_remaining_h
+    """
+    try:
+        opened_at  = datetime.strptime(state_pos["opened_at"], "%Y-%m-%d %H:%M:%S")
+        hours_held = (now - opened_at).total_seconds() / 3600
+        net_fr     = float(state_pos.get("entry_net_fr_1h", 0))
+        size_usd   = float(state_pos.get("size_usd", 90))
+
+        # Lighter モードは HL 側のみ taker 手数料
+        total_cost_usd  = HL_COST_RT * size_usd
+        est_funding_usd = net_fr * hours_held * size_usd
+        est_net_usd     = est_funding_usd - total_cost_usd
+
+        if net_fr > 0:
+            be_hours       = total_cost_usd / (net_fr * size_usd)
+            be_remaining_h = be_hours - hours_held
+            be_eta         = opened_at + __import__("datetime").timedelta(hours=be_hours)
+            be_eta_str     = be_eta.strftime("%H:%M UTC")
+        else:
+            be_hours = be_remaining_h = None
+            be_eta_str = "計算不可"
+
+        return {
+            "hours_held":     hours_held,
+            "est_funding_usd": est_funding_usd,
+            "total_cost_usd": total_cost_usd,
+            "est_net_usd":    est_net_usd,
+            "be_hours":       be_hours,
+            "be_remaining_h": be_remaining_h,
+            "be_eta_str":     be_eta_str,
+        }
+    except Exception as e:
+        return {}
+
+
+def build_position_section(hl_positions: list, counter_positions: list, now: datetime = None) -> list:
     lines = ["📊 <b>現在のポジション</b>"]
+    now = now or datetime.utcnow()
 
     if not hl_positions and not counter_positions:
         lines.append(f"  HL / {COUNTER_NAME}: ポジションなし")
         lines.append("")
         return lines
 
-    # HLポジション
-    if hl_positions:
-        for p in hl_positions:
-            pnl  = p["unrealized_pnl"]
-            fund = p["funding"]
-            sign = "+" if pnl >= 0 else ""
-            lines.append(
-                f"  {'🟢' if p['side']=='SHORT' else '🔴'} HL {p['coin']} {p['side']}"
-                f"  {p['size']:.4f}枚 @ ${p['entry_px']:.4f}"
-                f"\n    未実現PNL: <code>{sign}{pnl:.2f}$</code>"
-                f"  累計FR: <code>{'+' if fund>=0 else ''}{fund:.2f}$</code>"
-            )
-    else:
-        lines.append("  HL: ポジションなし")
+    state_positions = load_taker_state()
 
-    # Counter（Lighter or MEXC）ポジション
-    if counter_positions:
-        for p in counter_positions:
-            pnl  = float(p.get("unrealized_pnl", 0))
-            sign = "+" if pnl >= 0 else ""
-            coin = p.get("coin") or p.get("symbol", "")
-            side = p.get("side", "")
-            size = p.get("size") or p.get("contracts", 0)
-            entry= p.get("entry_price") or p.get("entry_px", 0)
+    # HLポジション
+    hl_by_coin = {p["coin"]: p for p in (hl_positions or [])}
+    ct_by_coin = {(p.get("coin") or p.get("symbol","")): p for p in (counter_positions or [])}
+    all_coins  = sorted(set(list(hl_by_coin.keys()) + list(ct_by_coin.keys())))
+
+    def s(v): return ("+" if v >= 0 else "") + f"{v:.2f}"
+
+    for coin in all_coins:
+        hl = hl_by_coin.get(coin)
+        ct = ct_by_coin.get(coin)
+        sp = state_positions.get(coin, {})
+        stats = calc_position_stats(sp, now) if sp else {}
+
+        if hl:
+            pnl  = hl["unrealized_pnl"]
+            fund = hl["funding"]
+            lines.append(
+                f"  {'🟢' if hl['side']=='SHORT' else '🔴'} HL {coin} {hl['side']}"
+                f"  {hl['size']:.4f}枚 @ ${hl['entry_px']:.4f}"
+                f"\n    未実現PNL: <code>{s(pnl)}$</code>"
+                f"  累計FR受取: <code>{s(fund)}$</code>"
+            )
+        if ct:
+            pnl  = float(ct.get("unrealized_pnl", 0))
+            side = ct.get("side", "")
+            size = float(ct.get("size") or ct.get("contracts", 0))
+            ep   = float(ct.get("entry_price") or ct.get("entry_px", 0))
             lines.append(
                 f"  {'🔴' if side=='LONG' else '🟢'} {COUNTER_NAME} {coin} {side}"
-                f"  {float(size):.4f}枚 @ ${float(entry):.4f}"
-                f"\n    未実現PNL: <code>{sign}{pnl:.2f}$</code>"
+                f"  {size:.4f}枚 @ ${ep:.4f}"
+                f"\n    未実現PNL: <code>{s(pnl)}$</code>"
             )
-    else:
-        lines.append(f"  {COUNTER_NAME}: ポジションなし")
 
-    lines.append("")
+        # 損益サマリー行（HL + Lighter 両建て合算）
+        if stats:
+            hl_pnl_v  = hl["unrealized_pnl"] if hl else 0.0
+            ct_pnl_v  = float(ct.get("unrealized_pnl", 0)) if ct else 0.0
+            price_pnl = hl_pnl_v + ct_pnl_v   # 完全ヘッジなら≒0
+            est_net   = stats["est_net_usd"]
+            held_h    = stats["hours_held"]
+            be_rem    = stats["be_remaining_h"]
+
+            if be_rem is not None and be_rem > 0:
+                be_line = f"損益分岐: あと<code>{be_rem:.1f}h</code> ({stats['be_eta_str']})"
+            elif be_rem is not None:
+                be_line = f"損益分岐: 到達済み ✅ ({stats['be_eta_str']} 超)"
+            else:
+                be_line = "損益分岐: 計算不可"
+
+            lines.append(
+                f"  💰 {coin}  保有<code>{held_h:.1f}h</code>"
+                f" | 推定FR収益: <code>{s(stats['est_funding_usd'])}$</code>"
+                f" | 手数料: <code>-{stats['total_cost_usd']:.2f}$</code>"
+                f"\n    推定net: <code>{s(est_net)}$</code>"
+                f" | 価格PNL合算: <code>{s(price_pnl)}$</code>"
+                f"\n    {be_line}"
+            )
+        lines.append("")
+
     return lines
 
 TAKER_RT     = 0.00035 * 2   # 0.070%
@@ -310,7 +397,7 @@ def send_message(token, chat_id, text):
         return json.loads(resp.read())
 
 
-def build_message(rows, now_str, hl_positions=None, counter_positions=None, net_rates=None):
+def build_message(rows, now_str, hl_positions=None, counter_positions=None, net_rates=None, now: datetime = None):
     sorted_long  = sorted([r for r in rows if r["rate"] < 0], key=lambda r: r["rate"])
     sorted_short = sorted([r for r in rows if r["rate"] > 0], key=lambda r: r["rate"], reverse=True)
     maker_total = sum(1 for r in rows if abs(r["rate"]) > MAKER_RT)
@@ -394,7 +481,7 @@ def build_message(rows, now_str, hl_positions=None, counter_positions=None, net_
         lines.append("ℹ️ <b>net FR基準のエントリー候補なし</b>")
         lines.append("")
 
-    pos_lines = build_position_section(hl_positions or [], counter_positions or [])
+    pos_lines = build_position_section(hl_positions or [], counter_positions or [], now=now)
     lines.extend(pos_lines)
 
     stuck_warnings = check_stuck_pnl(counter_positions or [])
@@ -410,7 +497,8 @@ def main():
     token   = env["TELEGRAM_BOT_TOKEN"]
     chat_id = env["TELEGRAM_CHAT_ID"]
 
-    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
+    now_dt  = datetime.now(timezone.utc).replace(tzinfo=None)  # naive UTC
+    now_str = now_dt.strftime("%Y-%m-%d %H:%M")
     print("Fetching funding data …")
     info = Info(skip_ws=True)
     rows = fetch_data(info)
@@ -444,6 +532,7 @@ def main():
         hl_positions=hl_positions,
         counter_positions=counter_positions,
         net_rates=net_rates,
+        now=now_dt,
     )
     print("--- Message preview ---")
     print(msg)

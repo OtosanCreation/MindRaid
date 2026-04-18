@@ -1,3 +1,36 @@
 {
-  "positions": {}
+  "positions": {
+    "0G": {
+      "exchange": "lighter",
+      "direction": "short_fr",
+      "opened_at": "2026-04-18 11:25:41",
+      "fr_at_entry": 0.00047494585,
+      "entry_net_fr_1h": 0.00047494585,
+      "entry_hl_fr_1h": 1.094585e-05,
+      "entry_counter_fr_1h": -0.000464,
+      "entry_mexc_fr_1h": -0.000464,
+      "size_usd": 90.0,
+      "hl_size_coin": 153.0,
+      "hl_entry_price": 0.5884,
+      "counter_size_coin": 152.78,
+      "counter_entry_price": 0.5891,
+      "entry_spread": 0.0011896668932697533
+    },
+    "VVV": {
+      "exchange": "lighter",
+      "direction": "long_fr",
+      "opened_at": "2026-04-18 11:25:41",
+      "fr_at_entry": 0.0011155000000000002,
+      "entry_net_fr_1h": 0.0011155000000000002,
+      "entry_hl_fr_1h": 1.25e-05,
+      "entry_counter_fr_1h": 0.001128,
+      "entry_mexc_fr_1h": 0.001128,
+      "size_usd": 90.0,
+      "hl_size_coin": 9.98,
+      "hl_entry_price": 9.0171,
+      "counter_size_coin": 9.98,
+      "counter_entry_price": 9.0222,
+      "entry_spread": -0.0005655920417873317
+    }
+  }
 }
