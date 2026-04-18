@@ -53,6 +53,61 @@ FUNDING_CSV  = os.path.join(DATA_DIR, "funding_log.csv")
 MEXC_FUNDING_CSV    = os.path.join(DATA_DIR, "mexc_funding_log.csv")
 LIGHTER_FUNDING_CSV = os.path.join(DATA_DIR, "lighter_funding_log.csv")
 STATE_FILE   = os.path.join(DATA_DIR, "taker_state.json")
+TRADES_CSV   = os.path.join(DATA_DIR, "trades.csv")
+
+TRADE_FIELDS = [
+    "trade_id", "coin", "direction",
+    "opened_at_utc", "closed_at_utc", "duration_h",
+    "size_usd", "hl_size_coin", "counter_size_coin",
+    "entry_hl_fr_1h", "entry_counter_fr_1h", "entry_net_fr_1h",
+    "entry_hl_px", "entry_counter_px", "entry_spread",
+    "exit_hl_fr_1h", "exit_counter_fr_1h", "exit_net_fr_1h",
+    "est_funding_usd", "est_cost_usd", "est_net_usd",
+    "exit_reason",
+]
+
+
+def log_trade_record(pos: dict, coin: str, closed_at: str, duration_h: float,
+                     exit_hl_fr: float, exit_counter_fr: float, exit_net_fr: float,
+                     est_funding: float, est_cost: float, est_net: float,
+                     exit_reason: str):
+    """確定したトレードを data/trades.csv に1行追記する（FB用ログ）。"""
+    try:
+        os.makedirs(DATA_DIR, exist_ok=True)
+        file_exists = os.path.exists(TRADES_CSV)
+        trade_id = f"{pos.get('opened_at','').replace(' ','T').replace(':','')}-{coin}"
+        row = {
+            "trade_id":            trade_id,
+            "coin":                coin,
+            "direction":           pos.get("direction", ""),
+            "opened_at_utc":       pos.get("opened_at", ""),
+            "closed_at_utc":       closed_at,
+            "duration_h":          round(duration_h, 3),
+            "size_usd":            pos.get("size_usd", ""),
+            "hl_size_coin":        pos.get("hl_size_coin", ""),
+            "counter_size_coin":   pos.get("counter_size_coin", ""),
+            "entry_hl_fr_1h":      pos.get("entry_hl_fr_1h", ""),
+            "entry_counter_fr_1h": pos.get("entry_mexc_fr_1h", pos.get("entry_counter_fr_1h", "")),
+            "entry_net_fr_1h":     pos.get("entry_net_fr_1h", ""),
+            "entry_hl_px":         pos.get("hl_entry_price", ""),
+            "entry_counter_px":    pos.get("counter_entry_price", ""),
+            "entry_spread":        pos.get("entry_spread", ""),
+            "exit_hl_fr_1h":       round(exit_hl_fr, 8) if exit_hl_fr is not None else "",
+            "exit_counter_fr_1h":  round(exit_counter_fr, 8) if exit_counter_fr is not None else "",
+            "exit_net_fr_1h":      round(exit_net_fr, 8) if exit_net_fr is not None else "",
+            "est_funding_usd":     round(est_funding, 4) if est_funding is not None else "",
+            "est_cost_usd":        round(est_cost, 4) if est_cost is not None else "",
+            "est_net_usd":         round(est_net, 4) if est_net is not None else "",
+            "exit_reason":         exit_reason,
+        }
+        with open(TRADES_CSV, "a", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=TRADE_FIELDS)
+            if not file_exists:
+                writer.writeheader()
+            writer.writerow(row)
+        print(f"  [trade_log] {trade_id} 記録完了 → {TRADES_CSV}")
+    except Exception as e:
+        print(f"[WARN] trade record 書き込み失敗: {e}")
 
 HL_PRIVATE_KEY  = os.environ["HL_PRIVATE_KEY"]
 HL_WALLET_ADDRESS = os.environ.get("HL_WALLET_ADDRESS", "")  # メインウォレット（API Wallet 使用時に必須）
@@ -760,6 +815,12 @@ def main():
                 except Exception as fe:
                     print(f"  HL force close失敗: {fe}")
             if hl_ok:
+                log_trade_record(
+                    pos, coin, ts, dur_h,
+                    exit_hl_fr=current_fr, exit_counter_fr=None, exit_net_fr=None,
+                    est_funding=None, est_cost=None, est_net=None,
+                    exit_reason="danger",
+                )
                 del positions[coin]
                 save_state(state)
                 tg(f"✅ DANGER EXIT完了: {coin}\nHL裸ポジションを決済しました\n保有: {dur_h:.1f}h")
@@ -944,6 +1005,13 @@ def main():
             est_fr   = est_fr_now
             est_cost = cost
             net      = est_fr - est_cost
+
+            log_trade_record(
+                pos, coin, ts, dur_h,
+                exit_hl_fr=hl_fr_now, exit_counter_fr=counter_fr_now, exit_net_fr=current_net_fr,
+                est_funding=est_fr, est_cost=est_cost, est_net=net,
+                exit_reason="normal",
+            )
 
             del positions[coin]
             save_state(state)
