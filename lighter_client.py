@@ -250,11 +250,14 @@ def get_positions() -> Optional[List[dict]]:
             )
             positions = []
             for p in result.accounts[0].positions:
+                size = abs(float(p.position))
+                if size <= 0:
+                    continue  # 0枚のゴーストポジションをスキップ
                 positions.append({
                     "symbol": p.symbol,
                     "market_id": p.market_id,
                     "side": "long" if p.sign >= 0 else "short",
-                    "size": abs(float(p.position)),
+                    "size": size,
                     "entry_price": float(p.avg_entry_price),
                     "unrealized_pnl": float(p.unrealized_pnl),
                     "position_value": float(p.position_value),
