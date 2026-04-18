@@ -160,6 +160,38 @@ def get_market_id(symbol: str) -> Optional[int]:
 
 # ─── パブリック API ────────────────────────────────────────────────────────────
 
+def check_signer_valid() -> Optional[str]:
+    """
+    .env の LIGHTER_API_PRIVATE_KEY から導出される pubkey と、
+    オンチェーン登録済みの pubkey が一致するか検証。
+    一致すれば None、不一致/エラーならエラー文字列を返す。
+
+    これは署名不要の SDK ローカル検証 + Lighter API 1リクエスト で完結する。
+    署名ミスマッチ（code=21120）を HL 発注前に検知してロールバックを防ぐための安全ガード。
+    """
+    async def _check():
+        api_priv = _get_api_private_key()
+        acct_idx = _get_account_index()
+        client = lighter.SignerClient(
+            url=LIGHTER_URL,
+            account_index=acct_idx,
+            api_private_keys={0: api_priv},
+        )
+        try:
+            err = client.check_client()
+        finally:
+            try:
+                await client.api_client.close()
+            except Exception:
+                pass
+        return err
+
+    try:
+        return _run(_check())
+    except Exception as e:
+        return f"check_signer_valid 例外: {e}"
+
+
 def test_connection() -> bool:
     """
     Lighter API への接続テスト（認証不要）。
@@ -266,6 +298,40 @@ def get_positions() -> Optional[List[dict]]:
             return positions
 
     return _retry(lambda: _run(_get()))
+
+
+def set_leverage(symbol: str, leverage: int = 1, cross_margin: bool = True) -> Optional[bool]:
+    """
+    Lighter 側のレバレッジを設定する。
+    leverage=1 (1x), cross_margin=True (CROSS) がデフォルト。
+    成功時 True、失敗時 None。冪等（同値でも通る）。
+    """
+    async def _set():
+        market_id = get_market_id(symbol)
+        if market_id is None:
+            raise ValueError(f"マーケットが見つかりません: {symbol}")
+
+        api_priv = _get_api_private_key()
+        client = lighter.SignerClient(
+            url=LIGHTER_URL,
+            account_index=_get_account_index(),
+            api_private_keys={0: api_priv},
+        )
+        margin_mode = 0 if cross_margin else 1  # 0=CROSS, 1=ISOLATED
+        tx_info, resp, err = await client.update_leverage(
+            market_index=market_id,
+            margin_mode=margin_mode,
+            leverage=leverage,
+        )
+        try:
+            await client.api_client.close()
+        except Exception:
+            pass
+        if err:
+            raise Exception(f"update_leverage 失敗: {err}")
+        return True
+
+    return _retry(lambda: _run(_set()))
 
 
 def place_order(

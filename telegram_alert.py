@@ -336,38 +336,34 @@ def build_message(rows, now_str, hl_positions=None, counter_positions=None, net_
 
     entry_candidates = []
 
-    def format_top_row(r, open_coins, net_rates):
-        """TOP3 の1行フォーマット。閾値超えのみ net 詳細を出す。"""
-        coin = r["coin"]
-        hl_fr_str = f"<code>{pct(r['rate'])}</code>/h"
-        net = net_rates.get(coin)
-        if not net:
-            return f"  {coin}  {hl_fr_str}"
-        short_net = float(net["net_short_1h"])
-        long_net  = float(net["net_long_1h"])
-        best_side = "SHORT" if short_net >= long_net else "LONG"
-        best_net  = max(short_net, long_net)
-        if coin in open_coins:
-            return f"  {coin}  {hl_fr_str}  →  net <code>{pct(best_net)}</code>/h ⚡保有中"
-        elif best_net >= ENTRY_FR:
-            return (f"  ⚡ {coin}  {hl_fr_str}"
-                    f"  →  net <code>{pct(best_net)}</code>/h [{best_side}]")
-        else:
-            # 閾値未満 → HL FR だけ表示、net詳細は省略
-            return f"  {coin}  {hl_fr_str}"
+    def format_top_row_by_net(coin, side_net, hl_rate, ct_rate, side, open_coins):
+        """TOP3 の1行フォーマット（netFR ベース）。常に netFR を表示する。"""
+        marker = "⚡" if side_net >= ENTRY_FR else " "
+        held = "  ⚡保有中" if coin in open_coins else ""
+        return (
+            f"  {marker} {coin}  net:<code>{pct(side_net)}</code>/h"
+            f"  (HL:<code>{pct(hl_rate)}</code> / {COUNTER_NAME}:<code>{pct(ct_rate)}</code>){held}"
+        )
 
-    top_long = sorted_long[:3]
-    if top_long:
-        lines.append("🟢 <b>HL SHORT機会 TOP3</b>")
-        for r in top_long:
-            lines.append(format_top_row(r, open_coins, net_rates))
+    # net_rates から SHORT 機会（net_short_1h 降順）/ LONG 機会（net_long_1h 降順）を構築
+    short_ops = []   # HL SHORT × Counter LONG
+    long_ops  = []   # HL LONG × Counter SHORT
+    for coin, nr in net_rates.items():
+        short_ops.append((coin, float(nr["net_short_1h"]), float(nr["hl_fr_1h"]), float(nr["counter_fr_1h"])))
+        long_ops.append((coin, float(nr["net_long_1h"]), float(nr["hl_fr_1h"]), float(nr["counter_fr_1h"])))
+    short_ops.sort(key=lambda x: x[1], reverse=True)
+    long_ops.sort(key=lambda x: x[1], reverse=True)
+
+    if short_ops:
+        lines.append(f"🟢 <b>SHORT機会 TOP3</b> (HL SHORT × {COUNTER_NAME} LONG, netFR降順)")
+        for coin, sn, hr, cr in short_ops[:3]:
+            lines.append(format_top_row_by_net(coin, sn, hr, cr, "SHORT", open_coins))
         lines.append("")
 
-    top_short = sorted_short[:3]
-    if top_short:
-        lines.append("🔴 <b>HL LONG機会 TOP3</b>")
-        for r in top_short:
-            lines.append(format_top_row(r, open_coins, net_rates))
+    if long_ops:
+        lines.append(f"🔴 <b>LONG機会 TOP3</b> (HL LONG × {COUNTER_NAME} SHORT, netFR降順)")
+        for coin, ln, hr, cr in long_ops[:3]:
+            lines.append(format_top_row_by_net(coin, ln, hr, cr, "LONG", open_coins))
         lines.append("")
 
     # 次スキャンで継続なら候補（実際のtaker_botと同じく net FR 優位側で判定）

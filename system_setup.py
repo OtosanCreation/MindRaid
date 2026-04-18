@@ -57,7 +57,35 @@ def update_env_value(key: str, value: str):
     return True
 
 
+def log_key_rotation(pubkey: str, tx_hash: str):
+    """鍵 rotation を logs/key_rotations.log に追記（監査用）。"""
+    import datetime
+    log_dir = os.path.join(os.path.dirname(__file__), "logs")
+    os.makedirs(log_dir, exist_ok=True)
+    path = os.path.join(log_dir, "key_rotations.log")
+    ts = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(f"{ts} UTC  pubkey={pubkey}  tx={tx_hash}\n")
+
+
+def check_already_valid() -> bool:
+    """既存の .env の鍵がオンチェーン鍵と一致していれば True。"""
+    try:
+        import lighter_client
+        err = lighter_client.check_signer_valid()
+        return err is None
+    except Exception:
+        return False
+
+
 async def setup():
+    # Idempotency: 既に一致していれば rotation しない（誤発動で .env と chain が乖離するのを防ぐ）
+    force = "--force" in sys.argv
+    if not force and check_already_valid():
+        print("[SKIP] .env の LIGHTER_API_PRIVATE_KEY は既にオンチェーン登録鍵と一致しています。")
+        print("       強制再登録したい場合は:  python system_setup.py --force")
+        return
+
     eth_private_key = os.getenv("LIGHTER_ETH_PRIVATE_KEY", "")
     account_index_str = os.getenv("LIGHTER_ACCOUNT_INDEX", "")
 
@@ -103,6 +131,7 @@ async def setup():
             sys.exit(1)
         print(f"      TX Hash: {result.tx_hash}")
         print(f"      Code: {result.code}")
+        log_key_rotation(api_public_key, result.tx_hash)
     except Exception as e:
         print(f"[ERROR] 例外発生: {e}")
         sys.exit(1)

@@ -544,6 +544,11 @@ def counter_open_long(client, coin: str, size_usd: float) -> dict:
     返却 dict: {size_coin, entry_price, exchange, [contracts, contract_size]}
     """
     if EXCHANGE_MODE == "LIGHTER":
+        # 発注前に 1x cross に設定（失敗しても発注自体は続行）
+        try:
+            lighter_client.set_leverage(symbol=coin, leverage=1, cross_margin=True)
+        except Exception as e:
+            print(f"  [WARN] Lighter set_leverage failed: {e}")
         res = lighter_client.place_order(symbol=coin, side="buy", size_usd=size_usd)
         if res is None:
             raise RuntimeError(f"Lighter open long failed: {coin}")
@@ -565,6 +570,10 @@ def counter_open_long(client, coin: str, size_usd: float) -> dict:
 
 def counter_open_short(client, coin: str, size_usd: float) -> dict:
     if EXCHANGE_MODE == "LIGHTER":
+        try:
+            lighter_client.set_leverage(symbol=coin, leverage=1, cross_margin=True)
+        except Exception as e:
+            print(f"  [WARN] Lighter set_leverage failed: {e}")
         res = lighter_client.place_order(symbol=coin, side="sell", size_usd=size_usd)
         if res is None:
             raise RuntimeError(f"Lighter open short failed: {coin}")
@@ -834,6 +843,25 @@ def main():
     counter_client = counter_init()   # Lighter は None, MEXC は ccxt client
     # 旧コード互換のため mexc 変数も残す（MEXC モード時のみ）
     mexc = counter_client if EXCHANGE_MODE == "MEXC" else None
+
+    # ── Lighter 署名ガード（HL 発注前に check_client で鍵不一致を検知）──
+    if EXCHANGE_MODE == "LIGHTER":
+        sign_err = lighter_client.check_signer_valid()
+        if sign_err is not None:
+            msg = (
+                "🚨 Lighter 署名鍵不一致を検知 → 全取引スキップ\n"
+                f"{sign_err}\n\n"
+                "対処: `python system_setup.py` で鍵を再登録してください。\n"
+                "（HL 側には未発注のため裸ポジションは発生していません）"
+            )
+            print(f"[ABORT] {msg}")
+            tg(msg)
+            send_gmail(
+                subject="[MindRaid] 🚨 Lighter 署名鍵不一致",
+                body=f"check_signer_valid 失敗。system_setup.py 再実行が必要。\n\n{sign_err}\n時刻: {ts} UTC",
+            )
+            return
+        print("[OK] Lighter signer check_client: 一致")
 
     sz_decimals_map = get_sz_decimals(info)
     hl_open_coins   = get_hl_open_coins(info, main_addr)
@@ -1134,7 +1162,8 @@ def main():
                 f"現在HL FR: {hl_fr_now:+.4%}/h  {counter_name} FR: {counter_fr_now:+.4%}/h\n"
                 f"推定FR収益: ${est_fr:.2f}\n"
                 f"手数料: ${est_cost:.2f}\n"
-                f"推定net: ${net:.2f}"
+                f"推定net: ${net:.2f}\n"
+                f"\n🔍 HL と {counter_name} 両取引所でポジションが実際にクローズされているか直接確認してください。"
             )
             post_x(
                 f"🔴 FR Arb 決済 #{coin}\n"
@@ -1167,10 +1196,13 @@ def main():
                 f"⚠️ EXIT 部分失敗: {coin}\n"
                 f"現在net FR: {current_net_fr:+.4%}/h\n"
                 f"HL: {'✅' if hl_ok else '❌'}  {counter_name}: {'✅' if counter_ok else '❌'}\n"
-                f"次のスキャンで再試行します"
+                f"次のスキャンで再試行します\n"
+                f"\n🚨 至急: HL と {counter_name} 両取引所の板を直接確認し、片側裸ポジションの有無をチェックしてください。必要なら手動でクローズを。"
             )
 
     # ── エントリーチェック ──────────────────────────────────────
+    # まず候補を抽出して netFR 降順でソート（MAX_POSITIONS 到達時に最優位を取りこぼさない）
+    entry_candidates = []  # [(avg_net_fr_1h, coin, rows, direction, selected_net)]
     for coin, rows in signals.items():
         if coin in positions:
             if positions[coin].get("status") == "danger":
@@ -1182,9 +1214,6 @@ def main():
             print(f"[SKIP] {coin} HL実ポジションあり（state未記録）→ エントリースキップ")
             tg(f"⚠️ {coin} HLにポジションあり（state未記録）\n手動確認してください")
             continue
-        if len(positions) >= MAX_POSITIONS:
-            print(f"MAX_POSITIONS ({MAX_POSITIONS}) 到達 → スキップ")
-            break
         if len(rows) < 2:
             continue
 
@@ -1200,6 +1229,18 @@ def main():
         avg_net_fr_1h = sum(selected_net) / len(selected_net)
         if avg_net_fr_1h < MIN_FR_1H:
             continue
+        entry_candidates.append((avg_net_fr_1h, coin, rows, direction, selected_net))
+
+    entry_candidates.sort(key=lambda x: x[0], reverse=True)
+    if entry_candidates:
+        print(f"[CANDIDATES] netFR降順: " + ", ".join(
+            f"{c[1]}({c[0]*100:.4f}%/h)" for c in entry_candidates[:5]
+        ))
+
+    for avg_net_fr_1h, coin, rows, direction, selected_net in entry_candidates:
+        if len(positions) >= MAX_POSITIONS:
+            print(f"MAX_POSITIONS ({MAX_POSITIONS}) 到達 → スキップ（残候補: {[c[1] for c in entry_candidates if c[0] <= avg_net_fr_1h and c[1] != coin]}）")
+            break
 
         avg_hl_fr_1h      = sum(float(r["hl_fr_1h"]) for r in rows) / len(rows)
         avg_counter_fr_1h = sum(float(r.get("counter_fr_1h", r.get("mexc_fr_1h", 0))) for r in rows) / len(rows)
@@ -1227,7 +1268,10 @@ def main():
                 hl_res = hl_open_long(exchange, info, coin, TRADE_SIZE_USD, sz_decimals_map)
         except Exception as e:
             print(f"  HL open error: {e}")
-            tg(f"⚠️ ENTRY HL ERROR: {coin}\n{e}")
+            tg(
+                f"⚠️ ENTRY HL ERROR: {coin}\n{e}\n"
+                f"\n🔍 HL の板でポジションが誤って残っていないか直接確認してください。"
+            )
             continue
 
         time.sleep(1)
@@ -1240,7 +1284,10 @@ def main():
                 ct_res = counter_open_short(counter_client, coin, TRADE_SIZE_USD)
         except Exception as e:
             print(f"  {counter_name_enter} open error → HL rollback: {e}")
-            tg(f"⚠️ ENTRY {counter_name_enter} ERROR: {coin}\n{e}\nHL rollback中...")
+            tg(
+                f"⚠️ ENTRY {counter_name_enter} ERROR: {coin}\n{e}\nHL rollback中...\n"
+                f"\n🔍 {counter_name_enter} の板でポジションが誤って約定していないか直接確認してください。"
+            )
             hl_rb_ok = False
             try:
                 if direction == "short_fr":
@@ -1262,9 +1309,15 @@ def main():
                 hl_rb_ok = False
                 print(f"  [検証失敗] HL {coin} ポジションまだ残存")
             if hl_rb_ok:
-                tg(f"  HL rollback完了（実ポジション消滅確認）")
+                tg(
+                    f"  HL rollback完了（実ポジション消滅確認）\n"
+                    f"🔍 念のため HL と {counter_name_enter} 両取引所の板でポジションが残っていないか直接確認してください。"
+                )
             else:
-                tg(f"  HL rollback失敗: {coin} HL裸ポジション残存")
+                tg(
+                    f"  HL rollback失敗: {coin} HL裸ポジション残存\n"
+                    f"\n🚨 至急: HL の板を直接確認し、手動で裸ポジションをクローズしてください。"
+                )
                 positions[coin] = {
                     "status": "danger", "opened_at": ts,
                     "reason": f"{counter_name_enter.lower()}_error_hl_rollback_failed"
@@ -1335,12 +1388,16 @@ def main():
                 print(f"  [スプレッド検証失敗] HL {coin} ポジションまだ残存")
 
             if hl_rb_ok and ct_rb_ok:
-                tg(f"✅ ロールバック完了: {coin}\nエントリー見送りました")
+                tg(
+                    f"✅ ロールバック完了: {coin}\nエントリー見送りました\n"
+                    f"🔍 念のため HL と {counter_name_enter} 両取引所の板にポジションが残っていないか直接確認してください。"
+                )
             else:
                 tg(
                     f"🚨 ロールバック失敗: {coin}\n"
                     f"HL: {'✅' if hl_rb_ok else '❌'}  {counter_name_enter}: {'✅' if ct_rb_ok else '❌'}\n"
-                    f"手動で確認・決済してください"
+                    f"手動で確認・決済してください\n"
+                    f"\n🚨 至急: 両取引所の板を直接確認し、残存ポジションを手動クローズしてください。"
                 )
                 send_gmail(
                     subject=f"[MindRaid] 🚨 ROLLBACK FAILED: {coin}",
@@ -1395,7 +1452,8 @@ def main():
             f"HL FR: {avg_hl_fr_1h:+.4%}/h  {counter_name_enter} FR: {avg_counter_fr_1h:+.4%}/h\n"
             f"Size: ${TRADE_SIZE_USD}\n"
             f"HL @ {hl_res['entry_price']:.6f}  ({hl_res['size_coin']} coins)\n"
-            f"{counter_name_enter} @ {ct_res['entry_price']:.6f}  {ct_size_str}"
+            f"{counter_name_enter} @ {ct_res['entry_price']:.6f}  {ct_size_str}\n"
+            f"\n🔍 HL と {counter_name_enter} 両取引所の板でポジションが実際に約定しているか直接確認してください。"
         )
         post_x(
             f"🟢 FR Arb エントリー #{coin}\n"
