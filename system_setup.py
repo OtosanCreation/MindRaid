@@ -114,17 +114,19 @@ async def setup():
     print(f"      Private Key: {api_private_key[:10]}...{api_private_key[-6:]}")
 
     # Step 2: 未登録のキーで一時的な SignerClient を作成して change_api_key を実行
-    print("\n[2/3] ETH 署名で API キーをオンチェーン登録中...")
+    # bot は slot 2 を使う（slot 0 は Lighter Web UI がセッション鍵で上書きするため避ける）
+    from lighter_client import BOT_API_KEY_INDEX
+    print(f"\n[2/3] ETH 署名で API キーをオンチェーン登録中（slot {BOT_API_KEY_INDEX}）...")
     try:
         client = lighter.SignerClient(
             url=LIGHTER_URL,
             account_index=account_index,
-            api_private_keys={0: api_private_key},
+            api_private_keys={BOT_API_KEY_INDEX: api_private_key},
         )
         result, err = await client.change_api_key(
             eth_private_key=eth_private_key,
             new_pubkey=api_public_key,
-            api_key_index=0,
+            api_key_index=BOT_API_KEY_INDEX,
         )
         if err:
             print(f"[ERROR] change_api_key 失敗: {err}")
@@ -147,6 +149,19 @@ async def setup():
 
     print("\n✅ セットアップ完了！")
     print("   次のステップ: python lighter_client.py を実行して接続確認")
+
+
+async def setup_force():
+    """taker_bot から直接呼び出すための強制再登録エントリポイント。"""
+    # --force 相当で実行
+    import sys as _sys
+    orig = _sys.argv[:]
+    if "--force" not in _sys.argv:
+        _sys.argv.append("--force")
+    try:
+        await setup()
+    finally:
+        _sys.argv = orig
 
 
 if __name__ == "__main__":

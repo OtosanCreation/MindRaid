@@ -30,6 +30,9 @@ LIGHTER_URL = "https://mainnet.zklighter.elliot.ai"
 RETRY_COUNT = 3
 RETRY_INTERVAL = 1.0   # 秒
 
+# bot 専用 API キースロット。slot 0 は Lighter Web UI がセッション鍵で勝手に上書きするため避ける。
+BOT_API_KEY_INDEX = int(os.getenv("LIGHTER_API_KEY_INDEX", "2"))
+
 MARKETS_CACHE_PATH = os.path.join(os.path.dirname(__file__), "data", "lighter_markets.json")
 
 # ─── Telegram 通知（循環 import を避けるためインライン実装）────────────────────
@@ -175,7 +178,7 @@ def check_signer_valid() -> Optional[str]:
         client = lighter.SignerClient(
             url=LIGHTER_URL,
             account_index=acct_idx,
-            api_private_keys={0: api_priv},
+            api_private_keys={BOT_API_KEY_INDEX: api_priv},
         )
         try:
             err = client.check_client()
@@ -241,6 +244,7 @@ def get_funding_rates() -> Optional[Dict[str, float]]:
     Lighter のパープ FR を取得する。
     戻り値: { "ETH": 0.0001, "BTC": -0.00005, ... } （1 時間あたりレート）
     失敗時 None。
+    注意: FundingApi.funding_rates() の rate は 8h レートのため /8 して 1h に変換する。
     """
     async def _get():
         cfg = lighter.Configuration(host=LIGHTER_URL)
@@ -250,7 +254,7 @@ def get_funding_rates() -> Optional[Dict[str, float]]:
         result = {}
         for r in rates.funding_rates:
             if r.exchange == "lighter":
-                result[r.symbol] = float(r.rate)
+                result[r.symbol] = float(r.rate) / 8.0  # 8h → 1h 変換
         return result
 
     return _retry(lambda: _run(_get()))
@@ -315,7 +319,7 @@ def set_leverage(symbol: str, leverage: int = 1, cross_margin: bool = True) -> O
         client = lighter.SignerClient(
             url=LIGHTER_URL,
             account_index=_get_account_index(),
-            api_private_keys={0: api_priv},
+            api_private_keys={BOT_API_KEY_INDEX: api_priv},
         )
         margin_mode = 0 if cross_margin else 1  # 0=CROSS, 1=ISOLATED
         tx_info, resp, err = await client.update_leverage(
@@ -363,7 +367,7 @@ def place_order(
         client = lighter.SignerClient(
             url=LIGHTER_URL,
             account_index=_get_account_index(),
-            api_private_keys={0: api_priv},
+            api_private_keys={BOT_API_KEY_INDEX: api_priv},
         )
 
         # best price を取得して USD → コイン数を計算
@@ -425,7 +429,7 @@ def close_position(symbol: str, side: str, size_coin: float) -> Optional[dict]:
         client = lighter.SignerClient(
             url=LIGHTER_URL,
             account_index=_get_account_index(),
-            api_private_keys={0: api_priv},
+            api_private_keys={BOT_API_KEY_INDEX: api_priv},
         )
 
         client_order_index = int(time.time() * 1000) % (2**31)

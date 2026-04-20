@@ -1,0 +1,68 @@
+{
+  "positions": {
+    "WLD": {
+      "exchange": "lighter",
+      "direction": "short_fr",
+      "opened_at": "2026-04-19 15:00:02",
+      "fr_at_entry": 0.0012490354499999998,
+      "entry_net_fr_1h": 0.0012490354499999998,
+      "entry_hl_fr_1h": -0.00012296455,
+      "entry_counter_fr_1h": -0.001372,
+      "entry_mexc_fr_1h": -0.001372,
+      "size_usd": 90.0,
+      "hl_size_coin": 334.7,
+      "hl_entry_price": 0.26883,
+      "counter_size_coin": 334.8,
+      "counter_entry_price": 0.26882,
+      "entry_spread": -3.719822936431946e-05
+    },
+    "SPX": {
+      "exchange": "lighter",
+      "direction": "short_fr",
+      "opened_at": "2026-04-19 15:00:02",
+      "fr_at_entry": 0.0011245,
+      "entry_net_fr_1h": 0.0011245,
+      "entry_hl_fr_1h": 1.25e-05,
+      "entry_counter_fr_1h": -0.0011120000000000001,
+      "entry_mexc_fr_1h": -0.0011120000000000001,
+      "size_usd": 90.0,
+      "hl_size_coin": 267.2,
+      "hl_entry_price": 0.33674,
+      "counter_size_coin": 267.3,
+      "counter_entry_price": 0.33666,
+      "entry_spread": -0.00023757201401665673
+    },
+    "ICP": {
+      "exchange": "lighter",
+      "direction": "short_fr",
+      "opened_at": "2026-04-19 15:00:02",
+      "fr_at_entry": 0.0008021485500000001,
+      "entry_net_fr_1h": 0.0008021485500000001,
+      "entry_hl_fr_1h": 6.148550000000001e-06,
+      "entry_counter_fr_1h": -0.000796,
+      "entry_mexc_fr_1h": -0.000796,
+      "size_usd": 90.0,
+      "hl_size_coin": 36.1,
+      "hl_entry_price": 2.4888,
+      "counter_size_coin": 36.15,
+      "counter_entry_price": 2.4898,
+      "entry_spread": 0.00040180006428796607
+    },
+    "2Z": {
+      "exchange": "lighter",
+      "direction": "short_fr",
+      "opened_at": "2026-04-19 15:00:02",
+      "fr_at_entry": 0.0007398121000000001,
+      "entry_net_fr_1h": 0.0007398121000000001,
+      "entry_hl_fr_1h": -3.61879e-05,
+      "entry_counter_fr_1h": -0.000776,
+      "entry_mexc_fr_1h": -0.000776,
+      "size_usd": 90.0,
+      "hl_size_coin": 1043.0,
+      "hl_entry_price": 0.086251,
+      "counter_size_coin": 1042.0,
+      "counter_entry_price": 0.08637,
+      "entry_spread": 0.0013796941484737336
+    }
+  }
+}

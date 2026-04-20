@@ -53,8 +53,8 @@
 <div class="header">
   <h1>⚡ MindRaid</h1>
   <p>非エンジニアが Claude Code で作る アービトラージシステム</p>
-  <p style="color:#444;margin-top:6px;font-size:0.8em;">2026-04-18 更新</p>
-  <p style="color:#f5a623;margin-top:4px;font-size:0.75em;">Phase 5 本番稼働 — HL × Lighter DEX / $90/pos × 最大2 / ローカルCron 30分スキャン</p>
+  <p style="color:#444;margin-top:6px;font-size:0.8em;">2026-04-19 更新</p>
+  <p style="color:#f5a623;margin-top:4px;font-size:0.75em;">Phase 5 稼働中 — HL × Lighter DEX / $90/pos × 最大4 / ローカルCron 30分スキャン / N=7 全勝 累計 +$3.17</p>
 </div>
 
 <div class="timeline">
@@ -166,14 +166,26 @@
         <li class="done-task"><span class="icon">✓</span>trades.csv トレード履歴記録 + HL実 funding API 取得（FB ループ基盤）</li>
         <li class="done-task"><span class="icon">✓</span>3連敗検知 → Telegram 自動通知</li>
         <li class="done-task"><span class="icon">✓</span>Telegram FR サマリーを Lighter 対応銘柄のみに絞り込み（net不明 排除）</li>
-        <li class="active-task"><span class="icon">▸</span>taker_bot 本番稼働中（$90/ポジション × 最大2 / MIN_FR=0.04%/h）</li>
-        <li class="active-task"><span class="icon">▸</span>HL×Lighter 共通 160 銘柄 FR 蓄積中（30分ごと）</li>
-        <li class="active-task"><span class="icon">▸</span>Gmail / Telegram の通知体制稼働（取引完了・3連敗アラート）</li>
+        <li class="done-task"><span class="icon">✓</span>MAX_POSITIONS 2→4 拡張（4/18、$360運用開始）</li>
+        <li class="done-task"><span class="icon">✓</span>エントリー候補 netFR 降順ソート（最高利回り優先）</li>
+        <li class="done-task"><span class="icon">✓</span>Telegram通知強化：SHORT/LONG TOP3、損益分岐時刻、現P&amp;L表示</li>
+        <li class="done-task"><span class="icon">✓</span>Lighter leverage 1x 固定（update_leverage呼び出し追加）</li>
+        <li class="done-task"><span class="icon">✓</span>署名鍵不一致 startup guard（system_setup.py 冪等化）</li>
+        <li class="done-task"><span class="icon">✓</span>Lighter API鍵スロット分離（bot=slot2 / UI=slot0）→ 署名鍵不一致を根本解決（4/19）</li>
+        <li class="done-task"><span class="icon">✓</span>署名鍵不一致の自律修復（system_setup.setup_force() 自動実行）</li>
+        <li class="done-task"><span class="icon">✓</span>P&amp;L計算を実 Funding API ベースに修正（entry FR定数推定 → HL userFunding + Lighter CSV実績値）</li>
+        <li class="done-task"><span class="icon">✓</span>Telegram通知を平易な表現に刷新（稼ぎ率・やめる基準・倍率・手取りを明記）</li>
+        <li class="done-task"><span class="icon">✓</span>MAX_POSITIONS到達時の不要セクション抑制・HOLD/EXIT判断理由の自動付記</li>
+        <li class="active-task"><span class="icon">▸</span>taker_bot 本番稼働中（$90/pos × 最大4 / MIN_FR=0.04%/h）N=7 全勝 累計 +$3.17</li>
+        <li class="active-task"><span class="icon">▸</span>HL×Lighter 共通 92銘柄 FR 蓄積中（30分ごと）</li>
+        <li class="active-task"><span class="icon">▸</span>Gmail / Telegram 通知体制稼働（取引完了・自律修復アラート）</li>
+        <li class="todo"><span class="icon">▸</span>銘柄名正規化（1000SHIB↔kSHIB 等）で 92→96銘柄対応</li>
       </ul>
       <div class="profit-box">
-        <div class="label">コスト比較（往復手数料）</div>
-        <div class="value">MEXC 0.17% → Lighter 0.07%（-59%）／ MIN_FR 0.05%→0.04%/h に緩和</div>
+        <div class="label">コスト構造（往復手数料）</div>
+        <div class="value">HL taker 0.09% + Lighter 0% = 0.09%／ 月次期待利回り ~4.7%（$360投入）</div>
       </div>
+      <div class="warn-box">物理制約：HL 229銘柄 × Lighter 160銘柄 → arb可能 92銘柄が上限（他68はHLに該当ペアなし）</div>
     </div>
   </div>
 
@@ -182,13 +194,14 @@
     <div class="phase-card">
       <div class="phase-header">
         <span class="phase-tag tag-pending">NEXT</span>
-        <span class="phase-title">Phase 6 ── 観測 &amp; データ蓄積</span>
-        <span class="phase-meta">〜2週間（4/17〜5/1目安）</span>
+        <span class="phase-title">Phase 6 ── トライアル検証 &amp; データ蓄積</span>
+        <span class="phase-meta">〜2週間（4/19〜5/3目安）</span>
       </div>
       <ul class="tasks">
-        <li class="todo"><span class="icon">▸</span>N=30件 トレード蓄積（trades.csv）</li>
-        <li class="todo"><span class="icon">▸</span>analyze_trades.py で entry_net_fr バケット別勝率・推定精度レビュー</li>
-        <li class="todo"><span class="icon">▸</span>analyze_trades.py → グラフ・レポート化（analyze_report.py）</li>
+        <li class="todo"><span class="icon">▸</span>「この設計で稼げるか」を淡々と検証（ロット拡大は保留）</li>
+        <li class="todo"><span class="icon">▸</span>N=30件 トレード蓄積（trades.csv / pnl_log.csv）</li>
+        <li class="todo"><span class="icon">▸</span>実測ベースで月次利回り確定（現在の推定 +4.7% / $360）</li>
+        <li class="todo"><span class="icon">▸</span>analyze_trades.py で entry_net_fr バケット別勝率レビュー</li>
         <li class="todo"><span class="icon">▸</span>停止基準の確認（3連敗通知 / 週-3% DD で手動停止）</li>
       </ul>
       <div class="warn-box">⚠ この期間はパラメータを触らない（サンプル不足での最適化は過剰適合の温床）</div>
@@ -226,13 +239,13 @@
         <span class="phase-meta">Month 2〜3+</span>
       </div>
       <ul class="tasks">
-        <li class="todo"><span class="icon">▸</span>サイジング拡大（$100 → $300/pos、MAX 2 → 4）</li>
-        <li class="todo"><span class="icon">▸</span>運用規模 $300/pos × 4銘柄 → 月$200〜500 ターゲット</li>
+        <li class="todo"><span class="icon">▸</span>サイジング拡大（$90 → $300/pos、MAX 4維持）</li>
+        <li class="todo"><span class="icon">▸</span>運用規模 $300/pos × 4銘柄 → 月$70〜140 ターゲット（実測利回り次第）</li>
         <li class="todo"><span class="icon">▸</span>X フォロワー 500人 → 有料 Discord / note シグナル販売</li>
         <li class="todo"><span class="icon">▸</span>コードOSS化 → GitHub Sponsors / 受託</li>
         <li class="todo"><span class="icon">▸</span>X 広告収益（フォロワー数次第）</li>
       </ul>
-      <div class="warn-box">⚠ サイズ拡大前に銘柄ごとの Lighter 板厚・スリッページ検証必須</div>
+      <div class="warn-box">⚠ サイズ拡大前に銘柄ごとの Lighter 板厚・スリッページ検証必須。29ETH→月45万円は流動性の壁により非現実的、現実的な天井は月$300〜600</div>
     </div>
   </div>
 
@@ -246,12 +259,12 @@
       <div class="s-value">Phase 5 稼働中</div>
     </div>
     <div>
-      <div class="s-label">運用資金</div>
-      <div class="s-value">HL $849 + Lighter ~$204</div>
+      <div class="s-label">運用実績（4/18〜）</div>
+      <div class="s-value">N=7 全勝<br><span style="color:#2ecc71;">累計 +$3.17</span><br><span style="font-size:0.75em;color:#888;">$360運用・約20時間</span></div>
     </div>
     <div>
       <div class="s-label">次のアクション</div>
-      <div class="s-value" style="font-size:0.9em;">2週間観測 → 再最適化 → 動的閾値</div>
+      <div class="s-value" style="font-size:0.9em;">2週間トライアル検証 → 実利回り確定（N=30目標）</div>
     </div>
   </div>
 </div>
