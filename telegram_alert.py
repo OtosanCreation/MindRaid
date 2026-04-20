@@ -309,7 +309,7 @@ def build_position_section(hl_positions: list, counter_positions: list, now: dat
 
 TAKER_RT     = 0.00035 * 2   # 0.070%
 MAKER_RT     = 0.00010 * 2   # 0.020%
-ENTRY_FR     = 0.0002         # エントリー閾値: 0.02%/h（バックテスト最適値）
+ENTRY_FR     = 0.00005        # エントリー閾値: 0.005%/h（8x修正後バックテスト最適値）
 EXCHANGE_MODE = os.environ.get("EXCHANGE_MODE", "LIGHTER").upper()
 DATA_DIR     = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 HL_FUNDING_CSV      = os.path.join(DATA_DIR, "funding_log.csv")
@@ -432,7 +432,7 @@ def build_message(rows, now_str, hl_positions=None, counter_positions=None, net_
 
     lines = [
         f"<b>⚡ MindRaid</b>  {now_str} UTC",
-        f"スキャン対象 {len(rows)}銘柄 | 稼ぎ率が基準（{ENTRY_FR*100:.2f}%/h）を超えてる銘柄: {maker_total}銘柄",
+        f"スキャン対象 {len(rows)}銘柄 | 稼ぎ率が基準（{ENTRY_FR*100:.3f}%/h）を超えてる銘柄: {maker_total}銘柄",
         "",
     ]
 
@@ -446,7 +446,7 @@ def build_message(rows, now_str, hl_positions=None, counter_positions=None, net_
         flag = "⚡" if side_net >= ENTRY_FR else " "
         ratio = side_net / ENTRY_FR if ENTRY_FR > 0 else 0
         return (
-            f"  {flag} {coin}  net FR <code>{pct(side_net)}</code>/h（基準{ENTRY_FR*100:.2f}%の{ratio:.1f}倍）"
+            f"  {flag} {coin}  net FR <code>{pct(side_net)}</code>/h（基準{ENTRY_FR*100:.3f}%の{ratio:.1f}倍）"
             f"  HL <code>{pct(hl_rate)}</code> / {COUNTER_NAME} <code>{pct(ct_rate)}</code>{held}"
         )
 
@@ -459,60 +459,18 @@ def build_message(rows, now_str, hl_positions=None, counter_positions=None, net_
     long_ops.sort(key=lambda x: x[1], reverse=True)
 
     if short_ops:
-        lines.append(f"🟢 <b>net FR TOP3（売り戦略 / 基準 {ENTRY_FR*100:.2f}%/h以上でエントリー）</b>")
+        lines.append(f"🟢 <b>net FR TOP3（売り戦略 / 基準 {ENTRY_FR*100:.3f}%/h以上でエントリー）</b>")
         for coin, sn, hr, cr in short_ops[:3]:
             lines.append(format_top_row_by_net(coin, sn, hr, cr, open_coins))
         lines.append("")
 
     if long_ops:
-        lines.append(f"🔴 <b>net FR TOP3（買い戦略 / 基準 {ENTRY_FR*100:.2f}%/h以上でエントリー）</b>")
+        lines.append(f"🔴 <b>net FR TOP3（買い戦略 / 基準 {ENTRY_FR*100:.3f}%/h以上でエントリー）</b>")
         for coin, ln, hr, cr in long_ops[:3]:
             lines.append(format_top_row_by_net(coin, ln, hr, cr, open_coins))
         lines.append("")
 
-    # ── [D ブロック] エントリー候補予告：Phase 6 以降は taker_bot の ENTRY 通知で十分のため停止 ──
-    # taker_bot.py がエントリー実施時に個別通知するため、事前予告は重複。戻す場合はこのブロックを uncomment。
-    # 次スキャンで継続なら候補（実際のtaker_botと同じく net FR 優位側で判定）
-    # for r in rows:
-    #     coin = r["coin"]
-    #     if coin in open_coins:
-    #         continue
-    #     net = net_rates.get(coin)
-    #     if not net:
-    #         continue
-    #     short_net = float(net["net_short_1h"])
-    #     long_net = float(net["net_long_1h"])
-    #     best_side = "SHORT" if short_net >= long_net else "LONG"
-    #     best_net = max(short_net, long_net)
-    #     if best_net >= ENTRY_FR:
-    #         entry_candidates.append((coin, best_side, best_net, short_net, long_net))
-    #
-    # entry_candidates.sort(key=lambda x: x[2], reverse=True)
-    # # MAX_POSITIONS 到達時は「エントリー予定」セクションを出さない（どうせ買えない）
-    # try:
-    #     from taker_bot import MAX_POSITIONS as _MAX_POS
-    # except Exception:
-    #     _MAX_POS = 4
-    # at_capacity = len(open_coins) >= _MAX_POS
-    # if at_capacity:
-    #     lines.append(f"⛔ <b>ポジション満杯（{_MAX_POS}銘柄）→ 新規購入なし</b>")
-    #     lines.append("")
-    # elif entry_candidates:
-    #     lines.append("🎯 <b>次のスキャンでも続いてたら買う予定</b>")
-    #     for coin, side, best_net, short_net, long_net in entry_candidates[:5]:
-    #         side_jp = "売り戦略" if side == "SHORT" else "買い戦略"
-    #         lines.append(
-    #             f"  → {coin}（{side_jp}）稼ぎ率 <code>{pct(best_net)}</code>/h"
-    #         )
-    #     lines.append("")
-    # else:
-    #     lines.append("ℹ️ <b>今は買える銘柄なし</b>")
-    #     lines.append("")
-
-    # ── [E ブロック] ポジションスナップショット：Phase 6 以降は taker_bot の HOLD 通知で十分のため停止 ──
-    # build_position_section() 関数本体は残す（将来戻す場合はここを uncomment）
-    # pos_lines = build_position_section(hl_positions or [], counter_positions or [], now=now, hl_address=hl_address)
-    # lines.extend(pos_lines)
+    # D/E ブロック（エントリー予告・ポジションスナップショット）は taker_bot の ENTRY/HOLD 通知で代替のため削除済み
 
     # Lighter は PNL 計算が信頼できるため stuck チェック不要（MEXC 専用）
     if EXCHANGE_MODE != "LIGHTER":

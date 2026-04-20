@@ -37,11 +37,17 @@ try:
 except ImportError:
     pass
 
+# ── Kill switch（STOP ファイルが存在したら即 exit）──────────────
+import os as _os, sys as _sys
+if _os.path.exists(_os.path.expanduser("~/MindRaid/STOP")):
+    print("[KILL-SWITCH] STOP file present, exiting without action.")
+    _sys.exit(0)
+
 # ── 設定 ────────────────────────────────────────────────────────
 EXCHANGE_MODE   = os.environ.get("EXCHANGE_MODE", "LIGHTER").upper()  # "LIGHTER" or "MEXC"
 TRADE_SIZE_USD  = float(os.environ.get("TRADE_SIZE_USD", "100"))  # 1ポジションUSD
 MAX_POSITIONS   = int(os.environ.get("MAX_POSITIONS", "4"))        # 最大同時ポジション数
-MIN_FR_1H       = 0.0002  # エントリー最小 net FR閾値: 0.02%/h（バックテスト最適値）
+MIN_FR_1H       = 0.00005  # エントリー最小 net FR閾値: 0.005%/h（修正後 true 1h レート基準 / 12hでコスト回収見込み）
 MIN_HOLD_H      = 6       # 最低保有時間: FRフリップ以外はこれ未満で決済しない
 MAX_LEG_FR      = 0.005   # 片側FR上限: HL/Lighter どちらか |FR|>0.5%/h の銘柄はスパイク扱いで見送り
 EXIT_FR_1H      = -1e9    # 旧: 閾値割れEXIT は廃止。フリップ(<0)のみEXIT。互換のため定数は残す
@@ -1279,9 +1285,9 @@ def main():
                 f"\n🚨 至急: HL と {counter_name} 両取引所の板を直接確認し、片側裸ポジションの有無をチェックしてください。必要なら手動でクローズを。"
             )
 
-    # ── HOLD サマリー通知 ──────────────────────────────────────
-    if hold_lines:
-        tg("📊 保有ポジション状況\n" + "\n".join(hold_lines))
+    # ── HOLD サマリー通知は廃止（ENTRY/EXIT 通知のみで十分） ──────
+    # if hold_lines:
+    #     tg("📊 保有ポジション状況\n" + "\n".join(hold_lines))
 
     # ── エントリーチェック ──────────────────────────────────────
     # まず候補を抽出して netFR 降順でソート（MAX_POSITIONS 到達時に最優位を取りこぼさない）
