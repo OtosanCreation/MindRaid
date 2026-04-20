@@ -1,36 +1,68 @@
 {
   "positions": {
-    "0G": {
+    "YZY": {
       "exchange": "lighter",
       "direction": "short_fr",
-      "opened_at": "2026-04-18 11:25:41",
-      "fr_at_entry": 0.00047494585,
-      "entry_net_fr_1h": 0.00047494585,
-      "entry_hl_fr_1h": 1.094585e-05,
-      "entry_counter_fr_1h": -0.000464,
-      "entry_mexc_fr_1h": -0.000464,
+      "opened_at": "2026-04-20 11:30:05",
+      "fr_at_entry": 0.0025736866,
+      "entry_net_fr_1h": 0.0025736866,
+      "entry_hl_fr_1h": -0.0001908134,
+      "entry_counter_fr_1h": -0.0027645,
+      "entry_mexc_fr_1h": -0.0027645,
       "size_usd": 90.0,
-      "hl_size_coin": 153.0,
-      "hl_entry_price": 0.5884,
-      "counter_size_coin": 152.78,
-      "counter_entry_price": 0.5891,
-      "entry_spread": 0.0011896668932697533
+      "hl_size_coin": 299.0,
+      "hl_entry_price": 0.30059,
+      "counter_size_coin": 299.3,
+      "counter_entry_price": 0.3007,
+      "entry_spread": 0.00036594697095711427
     },
-    "VVV": {
+    "ICP": {
       "exchange": "lighter",
-      "direction": "long_fr",
-      "opened_at": "2026-04-18 11:25:41",
-      "fr_at_entry": 0.0011155000000000002,
-      "entry_net_fr_1h": 0.0011155000000000002,
-      "entry_hl_fr_1h": 1.25e-05,
-      "entry_counter_fr_1h": 0.001128,
-      "entry_mexc_fr_1h": 0.001128,
+      "direction": "short_fr",
+      "opened_at": "2026-04-20 11:30:05",
+      "fr_at_entry": 0.0003048137,
+      "entry_net_fr_1h": 0.0003048137,
+      "entry_hl_fr_1h": 7.8137e-06,
+      "entry_counter_fr_1h": -0.000297,
+      "entry_mexc_fr_1h": -0.000297,
       "size_usd": 90.0,
-      "hl_size_coin": 9.98,
-      "hl_entry_price": 9.0171,
-      "counter_size_coin": 9.98,
-      "counter_entry_price": 9.0222,
-      "entry_spread": -0.0005655920417873317
+      "hl_size_coin": 37.1,
+      "hl_entry_price": 2.4286,
+      "counter_size_coin": 37.06,
+      "counter_entry_price": 2.4287,
+      "entry_spread": 4.117598616495554e-05
+    },
+    "ZRO": {
+      "exchange": "lighter",
+      "direction": "short_fr",
+      "opened_at": "2026-04-20 11:30:05",
+      "fr_at_entry": 0.0002186492,
+      "entry_net_fr_1h": 0.0002186492,
+      "entry_hl_fr_1h": 1.492000000000002e-07,
+      "entry_counter_fr_1h": -0.00021849999999999997,
+      "entry_mexc_fr_1h": -0.00021849999999999997,
+      "size_usd": 90.0,
+      "hl_size_coin": 57.9,
+      "hl_entry_price": 1.5533,
+      "counter_size_coin": 57.9,
+      "counter_entry_price": 1.55332,
+      "entry_spread": 1.2875812785766448e-05
+    },
+    "2Z": {
+      "exchange": "lighter",
+      "direction": "short_fr",
+      "opened_at": "2026-04-20 11:30:05",
+      "fr_at_entry": 0.0002154134,
+      "entry_net_fr_1h": 0.0002154134,
+      "entry_hl_fr_1h": -5.25866e-05,
+      "entry_counter_fr_1h": -0.000268,
+      "entry_mexc_fr_1h": -0.000268,
+      "size_usd": 90.0,
+      "hl_size_coin": 1062.0,
+      "hl_entry_price": 0.0847,
+      "counter_size_coin": 1061.7,
+      "counter_entry_price": 0.08477,
+      "entry_spread": 0.0008264462809917429
     }
   }
 }
