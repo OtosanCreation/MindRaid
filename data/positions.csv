@@ -1,2 +1,1 @@
 position_id,opened_at_utc,closed_at_utc,coin,size,short_exchange,long_exchange,short_entry_price,long_entry_price,short_entry_fee_usd,long_entry_fee_usd,short_close_price,long_close_price,short_close_fee_usd,long_close_fee_usd,status,notes
-POS-001,2026-03-28 16:20:59,,ETH,0.2491,HL,HL,2028.7,2028.7,0.23,0.23,,,,,open,Phase3テスト開始
