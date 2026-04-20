@@ -916,7 +916,7 @@ def main():
 
             if current_fr >= EXIT_FR_1H:
                 print(f"[DANGER HOLD] {coin}  FR={current_fr*100:.4f}%/h  保有継続（HL裸注意）")
-                tg(f"⚠️ {coin}: 片側だけポジションが残っています（HL のみ）\nFR={current_fr*100:.4f}%/h  まだ決済基準内なので様子見中")
+                tg(f"⚠️ {coin}: HL側だけポジションが残ってます（危険な片側状態）\n金利: {current_fr*100:+.4f}%/h｜まだ様子見中")
                 continue
 
             print(f"[DANGER EXIT] {coin}  FR={current_fr*100:.4f}%/h < {EXIT_FR_1H*100:.4f}% → HL決済試行")
@@ -927,7 +927,7 @@ def main():
                 print(f"  HL {coin}: ポジションなし → stateから削除")
                 del positions[coin]
                 save_state(state)
-                tg(f"🧹 {coin}: HL にポジションが見つかりません。管理データから削除しました。")
+                tg(f"🧹 {coin}: HLにポジションなし（手動決済された？）→ BOTの管理データから削除")
                 continue
 
             hl_ok = False
@@ -968,7 +968,7 @@ def main():
                 )
                 del positions[coin]
                 save_state(state)
-                tg(f"✅ {coin}: 片側ポジションを決済しました\n保有時間: {dur_h:.1f}h")
+                tg(f"✅ {coin}: 片側残りを自動決済しました\n保有時間: {dur_h:.1f}時間")
                 send_gmail(
                     subject=f"[MindRaid] DANGER EXIT: {coin}",
                     body=f"危険ポジション（HL裸）を自動決済しました。\n銘柄: {coin}\n保有時間: {dur_h:.1f}h\n時刻: {ts} UTC"
@@ -1043,39 +1043,39 @@ def main():
             counter_earn = +counter_fr_now
 
         if current_net_fr >= exit_threshold:
-            cost_tag = "手数料回収済み" if cost_recovered else "手数料まだ回収中"
+            cost_tag = "手数料ぶん回収済み" if cost_recovered else "手数料まだ回収中"
             if dur_h < MIN_HOLD_H:
-                hold_reason = f"最低保有 {MIN_HOLD_H}h 未満 → ホールド確定（残り {MIN_HOLD_H - dur_h:.1f}h）"
+                hold_reason = f"買ってから {MIN_HOLD_H}時間経つまでは必ず持ち続ける設定（あと {MIN_HOLD_H - dur_h:.1f}時間）"
             else:
-                hold_reason = "net FR がまだプラス → ホールド継続（マイナス転落で決済）"
+                hold_reason = "まだプラスの金利がもらえてるから継続（マイナスになったら決済）"
             print(
                 f"[HOLD] {coin}  netFR={current_net_fr*100:+.4f}%/h  "
                 f"(HL={hl_fr_now*100:+.4f}%/h, {counter_name}={counter_fr_now*100:+.4f}%/h) 保有継続"
             )
             # ── 表示用：プラス転換までの推定時間（現 FR 継続仮定。計算・判定には未使用）──
             net_now = est_fr_now - cost
+            hourly_earn_usd = current_net_fr * pos["size_usd"]
             if net_now >= 0:
-                be_line = "   ✅ 既に黒字（プラス転換済み）"
+                be_line = "   ✅ すでに黒字（手数料回収済み）"
             else:
-                remaining   = -net_now  # まだ必要な額（正）
-                hourly_earn = current_net_fr * pos["size_usd"]  # 現 FR が続く仮定の時給($/h)
-                if hourly_earn <= 0:
-                    be_line = "   📍 プラスまでの時間: 未確定（現 FR ≤ 0）"
+                remaining   = -net_now
+                if hourly_earn_usd <= 0:
+                    be_line = "   📍 黒字化まで: 未定（今の金利がゼロ以下）"
                 else:
-                    be_hours = remaining / hourly_earn
-                    # MAX_HOLD は未定義のため 72h を暫定閾値として使用
+                    be_hours = remaining / hourly_earn_usd
                     if be_hours > 72:
-                        be_line = f"   ⚠ MAX_HOLD(72h) 超過見込み: プラスまで ~{be_hours:.1f}h"
+                        be_line = f"   ⚠ 黒字化まで ~{be_hours:.1f}時間（長すぎ注意）"
                     elif be_hours > 24:
-                        be_line = f"   ⚠ プラスまで ~{be_hours:.1f}h（長時間注意）"
+                        be_line = f"   ⚠ 黒字化まで ~{be_hours:.1f}時間（ちょっと長い）"
                     else:
-                        be_line = f"   📍 プラスまで あと ~{be_hours:.1f}h"
+                        be_line = f"   📍 黒字化まで あと ~{be_hours:.1f}時間"
 
+            net_emoji = "💰" if net_now >= 0 else "📉"
             hold_lines.append(
-                f"🔵 {coin}  持ち続ける（{cost_tag}）\n"
-                f"   {hold_reason}\n"
-                f"   net FR {current_net_fr*100:+.4f}%/h　(HL受取 {hl_earn*100:+.4f}%/h ＋ {counter_name}受取 {counter_earn*100:+.4f}%/h)\n"
-                f"   保有 {dur_h:.1f}h　収益 ${est_fr_now:.2f} − 手数料 ${cost:.2f} = 手取り ${est_fr_now - cost:+.2f}\n"
+                f"🔵 {coin} 保有継続（{cost_tag}）\n"
+                f"   理由: {hold_reason}\n"
+                f"   いまの時給: ${hourly_earn_usd:+.3f}（HL {hl_earn*100:+.3f}% + {counter_name} {counter_earn*100:+.3f}%）\n"
+                f"   経過 {dur_h:.1f}時間｜稼いだ金利 ${est_fr_now:.2f}｜手数料 ${cost:.2f}｜現在 {net_emoji} ${est_fr_now - cost:+.2f}\n"
                 f"{be_line}"
             )
             continue
@@ -1087,10 +1087,10 @@ def main():
             f"→ フリップ決済 (保有 {dur_h:.1f}h)"
         )
         tg(
-            f"🔴 {coin} 決済します\n"
-            f"理由: net FR がマイナスに転落（{current_net_fr*100:+.4f}%/h）\n"
-            f"HL受取 {hl_earn*100:+.4f}%/h ＋ {counter_name}受取 {counter_earn*100:+.4f}%/h\n"
-            f"保有時間: {dur_h:.1f}h　収益 ${est_fr_now:.2f} − 手数料 ${cost:.2f} = 手取り ${est_fr_now - cost:+.2f}"
+            f"🔴 {coin} これから決済します\n"
+            f"理由: 金利がマイナスに反転しちゃったので損する前に売り（時給 ${current_net_fr*pos['size_usd']:+.3f}）\n"
+            f"保有時間: {dur_h:.1f}時間\n"
+            f"稼いだ金利 ${est_fr_now:.2f}｜手数料 ${cost:.2f}｜手取り ${est_fr_now - cost:+.2f}"
         )
 
         # ── 実ポジション事前チェック ──
@@ -1242,21 +1242,21 @@ def main():
             # 3連敗チェック（同じ末尾 trade_id では二重通知しない）
             check_losing_streak(state, tg, n=3)
 
+            result_emoji = "💰 黒字ゲット！" if net >= 0 else "😓 赤字..."
             tg(
-                f"🔴 {coin} 決済完了\n"
-                f"理由: net FR がマイナスに転落（{current_net_fr*100:+.4f}%/h）\n"
-                f"保有時間: {dur_h:.1f}h\n"
-                f"HL {hl_fr_now*100:+.4f}%/h / {counter_name} {counter_fr_now*100:+.4f}%/h\n"
-                f"FR収益: ${est_fr:.2f}　手数料: ${est_cost:.2f}　手取り: ${net:.2f}\n"
-                f"\n🔍 HL と {counter_name} 両取引所でポジションが実際にクローズされているか直接確認してください。"
+                f"🔴 {coin} 決済完了！ {result_emoji}\n"
+                f"保有時間: {dur_h:.1f}時間\n"
+                f"稼いだ金利: +${est_fr:.2f}\n"
+                f"手数料: -${est_cost:.2f}\n"
+                f"手取り: ${net:+.2f}\n"
+                f"\n※ HLとLighter両方でちゃんとポジションが閉じているか念のため確認してください"
             )
+            result_tag = "💰 黒字" if net >= 0 else "😓 赤字"
             post_x(
-                f"🔴 FR Arb 決済 #{coin}\n"
-                f"保有時間: {dur_h:.1f}h\n"
-                f"現在net FR: {current_net_fr:+.4%}/h\n"
-                f"推定収益: ${est_fr:.2f} / net: ${net:.2f}\n"
-                f"{side_label}\n"
-                f"#FRArb #仮想通貨"
+                f"🔴 決済完了 #{coin}\n"
+                f"保有 {dur_h:.1f}時間｜稼いだ金利 +${est_fr:.2f}｜手数料 -${est_cost:.2f}\n"
+                f"手取り: {result_tag} ${net:+.2f}\n"
+                f"#FRアービトラージ #仮想通貨"
             )
             send_gmail(
                 subject=f"[MindRaid] EXIT: {coin}  net ${net:.2f}",
@@ -1278,16 +1278,16 @@ def main():
         else:
             # 片方失敗 → stateは残したまま次スキャンで再試行
             tg(
-                f"⚠️ EXIT 部分失敗: {coin}\n"
-                f"現在net FR: {current_net_fr:+.4%}/h\n"
-                f"HL: {'✅' if hl_ok else '❌'}  {counter_name}: {'✅' if counter_ok else '❌'}\n"
-                f"次のスキャンで再試行します\n"
-                f"\n🚨 至急: HL と {counter_name} 両取引所の板を直接確認し、片側裸ポジションの有無をチェックしてください。必要なら手動でクローズを。"
+                f"⚠️ {coin} 決済が片方だけ成功しました（危険）\n"
+                f"HL: {'✅成功' if hl_ok else '❌失敗'}｜{counter_name}: {'✅成功' if counter_ok else '❌失敗'}\n"
+                f"現在の金利: {current_net_fr:+.4%}/h\n"
+                f"→ 次のスキャンで自動再試行します\n"
+                f"\n🚨 急ぎ: HLと{counter_name}両方の画面を開いて、片方だけポジション残ってないか確認してください。残ってたら手動で閉じてください。"
             )
 
-    # ── HOLD サマリー通知は廃止（ENTRY/EXIT 通知のみで十分） ──────
-    # if hold_lines:
-    #     tg("📊 保有ポジション状況\n" + "\n".join(hold_lines))
+    # ── HOLD サマリー通知（大学生でもわかる表現で保有状況を毎時通知）──
+    if hold_lines:
+        tg("📊 保有中の銘柄まとめ\n\n" + "\n\n".join(hold_lines))
 
     # ── エントリーチェック ──────────────────────────────────────
     # まず候補を抽出して netFR 降順でソート（MAX_POSITIONS 到達時に最優位を取りこぼさない）
@@ -1540,20 +1540,27 @@ def main():
         else:
             ct_size_str = f"({ct_res['size_coin']} coins)"
 
+        strategy_jp = (
+            f"Hyperliquidで売り × {counter_name_enter}で買い"
+            if direction == "short_fr"
+            else f"Hyperliquidで買い × {counter_name_enter}で売り"
+        )
+        hourly_usd = avg_net_fr_1h * TRADE_SIZE_USD
+        daily_usd  = hourly_usd * 24
         tg(
-            f"🟢 {coin} エントリー完了\n"
-            f"戦略: {side_label}\n"
-            f"net FR: {avg_net_fr_1h:.4%}/h\n"
-            f"HL {avg_hl_fr_1h:+.4%}/h / {counter_name_enter} {avg_counter_fr_1h:+.4%}/h\n"
-            f"サイズ: ${TRADE_SIZE_USD}\n"
-            f"HL約定価格: {hl_res['entry_price']:.6f}  {counter_name_enter}約定価格: {ct_res['entry_price']:.6f}\n"
-            f"\n🔍 HL と {counter_name_enter} 両取引所でポジションが実際に建っているか直接確認してください。"
+            f"🟢 {coin} 新しく買った！\n"
+            f"作戦: {strategy_jp}（価格の動きは相殺、金利だけ受け取る）\n"
+            f"いまの時給: +${hourly_usd:.3f}（1日だと +${daily_usd:.2f}）\n"
+            f"使った資金: ${TRADE_SIZE_USD}\n"
+            f"約定価格: HL {hl_res['entry_price']:.6f} / {counter_name_enter} {ct_res['entry_price']:.6f}\n"
+            f"\n※ HLと{counter_name_enter}両方でポジションが立っているか念のため確認してください"
         )
         post_x(
-            f"🟢 FR Arb エントリー #{coin}\n"
-            f"方向: {side_label}\n"
-            f"net FR: {avg_net_fr_1h:.4%}/h\n"
-            f"#FRArb #仮想通貨"
+            f"🟢 新しく買った #{coin}\n"
+            f"作戦: {strategy_jp}（価格変動を打ち消して金利だけ取る）\n"
+            f"時給: +${hourly_usd:.3f}（1日 +${daily_usd:.2f}）\n"
+            f"資金: ${TRADE_SIZE_USD}\n"
+            f"#FRアービトラージ #仮想通貨"
         )
         send_gmail(
             subject=f"[MindRaid] ENTRY: {coin}  {side_label}",
