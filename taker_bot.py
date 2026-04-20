@@ -40,10 +40,12 @@ except ImportError:
 # ── 設定 ────────────────────────────────────────────────────────
 EXCHANGE_MODE   = os.environ.get("EXCHANGE_MODE", "LIGHTER").upper()  # "LIGHTER" or "MEXC"
 TRADE_SIZE_USD  = float(os.environ.get("TRADE_SIZE_USD", "100"))  # 1ポジションUSD
-MAX_POSITIONS   = int(os.environ.get("MAX_POSITIONS", "2"))        # 最大同時ポジション数
-MIN_FR_1H       = 0.0004  # エントリー最小 net FR閾値: 0.04%/h（BE=1.75h @ Lighter 0.07%往復）
-EXIT_FR_1H      = 0.0002  # 決済 net FR閾値: 0.02%/h（コスト回収前）
-EXIT_FR_RECOVERED = 0.0001  # コスト回収済み後の決済閾値: 0.01%/h
+MAX_POSITIONS   = int(os.environ.get("MAX_POSITIONS", "4"))        # 最大同時ポジション数
+MIN_FR_1H       = 0.0002  # エントリー最小 net FR閾値: 0.02%/h（バックテスト最適値）
+MIN_HOLD_H      = 6       # 最低保有時間: FRフリップ以外はこれ未満で決済しない
+MAX_LEG_FR      = 0.005   # 片側FR上限: HL/Lighter どちらか |FR|>0.5%/h の銘柄はスパイク扱いで見送り
+EXIT_FR_1H      = -1e9    # 旧: 閾値割れEXIT は廃止。フリップ(<0)のみEXIT。互換のため定数は残す
+EXIT_FR_RECOVERED = -1e9  # 同上
 # MAX_ENTRY_SPREAD: LIGHTER では手数料0のため閾値を小さくしても良いが、
 # 価格スリッページ自体のリスクは同じなので 0.15% を維持
 MAX_ENTRY_SPREAD = 0.0015   # エントリー時許容スプレッド: 0.15%（不利側。超えたらロールバック）
@@ -848,26 +850,37 @@ def main():
     if EXCHANGE_MODE == "LIGHTER":
         sign_err = lighter_client.check_signer_valid()
         if sign_err is not None:
-            msg = (
-                "🚨 Lighter 署名鍵不一致を検知 → 全取引スキップ\n"
-                f"{sign_err}\n\n"
-                "対処: `python system_setup.py` で鍵を再登録してください。\n"
-                "（HL 側には未発注のため裸ポジションは発生していません）"
-            )
-            print(f"[ABORT] {msg}")
-            tg(msg)
-            send_gmail(
-                subject="[MindRaid] 🚨 Lighter 署名鍵不一致",
-                body=f"check_signer_valid 失敗。system_setup.py 再実行が必要。\n\n{sign_err}\n時刻: {ts} UTC",
-            )
-            return
+            print(f"[WARN] Lighter 署名鍵不一致を検知 → 自律修復を試みます\n{sign_err}")
+            tg(f"⚠️ Lighter との接続キーがずれています\n自動で修復します（取引は一時停止）...")
+            try:
+                import asyncio as _asyncio
+                import system_setup as _ss
+                _asyncio.run(_ss.setup_force())
+                sign_err2 = lighter_client.check_signer_valid()
+                if sign_err2 is None:
+                    print("[OK] 自律修復成功 → 処理を継続します")
+                    tg("✅ 接続キーの自動修復に成功しました。取引を再開します。")
+                else:
+                    raise RuntimeError(sign_err2)
+            except Exception as e:
+                msg = (
+                    f"🚨 接続キーの自動修復に失敗しました。今回の取引はスキップします。\n{e}\n"
+                    "手動対応: python3 system_setup.py --force を実行してください。"
+                )
+                print(f"[ABORT] {msg}")
+                tg(msg)
+                send_gmail(
+                    subject="[MindRaid] 🚨 Lighter 署名鍵 自律修復失敗",
+                    body=f"{msg}\n時刻: {ts} UTC",
+                )
+                return
         print("[OK] Lighter signer check_client: 一致")
 
     sz_decimals_map = get_sz_decimals(info)
     hl_open_coins   = get_hl_open_coins(info, main_addr)
     if hl_open_coins is None:
         print("[ABORT] HL実ポジション取得失敗 → 安全のため全処理スキップ")
-        tg("🚨 taker_bot ABORT: HL実ポジション取得失敗\n削除・エントリーを安全のためスキップしました")
+        tg("🚨 HL のポジション情報が取得できませんでした\n安全のため今回の取引はすべてスキップします")
         send_gmail(
             subject="[MindRaid] taker_bot ABORT: HL API失敗",
             body=f"HL実ポジション取得失敗のためスキップ。\n時刻: {ts} UTC"
@@ -879,6 +892,7 @@ def main():
     signals    = get_latest_net_signals(n=2)
 
     # ── 決済チェック（先に行う）────────────────────────────────
+    hold_lines: list[str] = []  # HOLD サマリー（ループ後にまとめて Telegram 送信）
     for coin in list(positions.keys()):
         pos = positions[coin]
 
@@ -886,7 +900,7 @@ def main():
         if pos.get("status") == "danger":
             sig = hl_signals.get(coin, [])
             if not sig:
-                tg(f"🚨 危険ポジション保有中: {coin}（FRデータなし）\nHL手動確認してください")
+                tg(f"🚨 {coin}: FRデータが取れないため状態確認できません\nHLを直接確認してください")
                 continue
 
             current_fr = abs(sig[-1]["fr"])
@@ -896,7 +910,7 @@ def main():
 
             if current_fr >= EXIT_FR_1H:
                 print(f"[DANGER HOLD] {coin}  FR={current_fr*100:.4f}%/h  保有継続（HL裸注意）")
-                tg(f"⚠️ 危険ポジション保有中: {coin}  FR={current_fr*100:.4f}%/h\nHL裸ショート・{counter_label()}ヘッジなし")
+                tg(f"⚠️ {coin}: 片側だけポジションが残っています（HL のみ）\nFR={current_fr*100:.4f}%/h  まだ決済基準内なので様子見中")
                 continue
 
             print(f"[DANGER EXIT] {coin}  FR={current_fr*100:.4f}%/h < {EXIT_FR_1H*100:.4f}% → HL決済試行")
@@ -907,7 +921,7 @@ def main():
                 print(f"  HL {coin}: ポジションなし → stateから削除")
                 del positions[coin]
                 save_state(state)
-                tg(f"🧹 DANGERゴースト削除: {coin}\nHLにポジションなし\nstate.jsonをクリーンアップしました")
+                tg(f"🧹 {coin}: HL にポジションが見つかりません。管理データから削除しました。")
                 continue
 
             hl_ok = False
@@ -935,7 +949,7 @@ def main():
                 try:
                     hl_force_close(exchange, info, coin, main_addr, sz_decimals_map)
                     print(f"  HL force close成功")
-                    tg(f"⚠️ HL 強制決済実行: {coin}\nmarket_close 3回失敗のためIOC指値注文で強制クローズしました")
+                    tg(f"⚠️ {coin}: 通常の決済ができなかったため強制決済しました（HL）")
                     hl_ok = True
                 except Exception as fe:
                     print(f"  HL force close失敗: {fe}")
@@ -948,13 +962,13 @@ def main():
                 )
                 del positions[coin]
                 save_state(state)
-                tg(f"✅ DANGER EXIT完了: {coin}\nHL裸ポジションを決済しました\n保有: {dur_h:.1f}h")
+                tg(f"✅ {coin}: 片側ポジションを決済しました\n保有時間: {dur_h:.1f}h")
                 send_gmail(
                     subject=f"[MindRaid] DANGER EXIT: {coin}",
                     body=f"危険ポジション（HL裸）を自動決済しました。\n銘柄: {coin}\n保有時間: {dur_h:.1f}h\n時刻: {ts} UTC"
                 )
             else:
-                tg(f"🚨 DANGER EXIT失敗: {coin}\n3回試行しても決済できません\n手動でHL確認してください")
+                tg(f"🚨 {coin}: 決済を3回試みましたが失敗しました\nHL を直接確認してください")
                 send_gmail(
                     subject=f"[MindRaid] 🚨 DANGER EXIT FAILED: {coin}",
                     body=f"危険ポジション（HL裸）の決済が失敗しました。手動でHL確認・決済してください。\n\n銘柄: {coin}\n時刻: {ts} UTC"
@@ -965,7 +979,7 @@ def main():
         sig = signals.get(coin, [])
         if not sig:
             print(f"[SKIP] {coin} ネットFRデータ不足（HL/{counter_label()}両方の最新データが未取得）")
-            tg(f"⚠️ {coin} ネットFRデータ不足\n今回はEXIT判定をスキップします")
+            tg(f"⚠️ {coin}: FRデータが揃っていないため今回の決済判断をスキップします")
             continue
 
         # 取引所ラベル（ポジションを開いた取引所を表示）
@@ -984,26 +998,93 @@ def main():
         now_dt     = datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
         dur_h      = (now_dt - opened).total_seconds() / 3600
         entry_net_fr_1h = float(pos.get("entry_net_fr_1h", pos.get("fr_at_entry", 0)))
-        est_fr_now = max(0.0, entry_net_fr_1h) * dur_h * pos["size_usd"]
+        # 実 funding ベースで現時点の推定収益を算出（entry FR × 時間は過大推定になる）
+        try:
+            _hl_fund_now = fetch_hl_actual_funding(info, main_addr, coin, pos.get("opened_at", ""), ts)
+        except Exception:
+            _hl_fund_now = 0.0
+        if pos_exchange == "lighter":
+            try:
+                _lt_fund_now = fetch_lighter_actual_funding(
+                    coin, pos.get("opened_at", ""), ts,
+                    pos.get("size_usd", TRADE_SIZE_USD), direction
+                )
+            except Exception:
+                _lt_fund_now = 0.0
+        else:
+            _lt_fund_now = 0.0
+        est_fr_now = _hl_fund_now + _lt_fund_now
         # コスト: Lighter なら 0.07% (HL x2 のみ)、MEXC なら 0.17% (HL + MEXC)
         cost_rate  = 0.0007 if pos_exchange == "lighter" else 0.0017
         cost       = cost_rate * pos["size_usd"]
         cost_recovered = est_fr_now >= cost
 
-        exit_threshold = EXIT_FR_RECOVERED if cost_recovered else EXIT_FR_1H
+        # 新ロジック: MIN_HOLD_H 未満は無条件ホールド、以降は net_fr が負に転じた時のみ EXIT
+        # 旧の EXIT_FR_1H / EXIT_FR_RECOVERED しきい値は廃止（コスト負けの主因だった）
+        if dur_h < MIN_HOLD_H:
+            exit_threshold = -1e9  # 初期 6h は絶対にホールド
+        else:
+            exit_threshold = 0.0   # 以降はフリップ(<0)のみ EXIT
+
+        # ── 表示用：方向別の受取額に変換（計算値 current_net_fr には影響なし）──
+        # short_fr: HL SHORT → +hl_fr 受取 / Counter LONG → -counter_fr 受取
+        # long_fr : HL LONG  → -hl_fr 受取 / Counter SHORT → +counter_fr 受取
+        if direction == "short_fr":
+            hl_earn      = +hl_fr_now
+            counter_earn = -counter_fr_now
+        else:  # long_fr
+            hl_earn      = -hl_fr_now
+            counter_earn = +counter_fr_now
 
         if current_net_fr >= exit_threshold:
+            cost_tag = "手数料回収済み" if cost_recovered else "手数料まだ回収中"
+            if dur_h < MIN_HOLD_H:
+                hold_reason = f"最低保有 {MIN_HOLD_H}h 未満 → ホールド確定（残り {MIN_HOLD_H - dur_h:.1f}h）"
+            else:
+                hold_reason = "net FR がまだプラス → ホールド継続（マイナス転落で決済）"
             print(
-                f"[HOLD] {coin}  netFR={current_net_fr*100:.4f}%/h  "
+                f"[HOLD] {coin}  netFR={current_net_fr*100:+.4f}%/h  "
                 f"(HL={hl_fr_now*100:+.4f}%/h, {counter_name}={counter_fr_now*100:+.4f}%/h) 保有継続"
-                f"{'（コスト回収済）' if cost_recovered else ''}"
+            )
+            # ── 表示用：プラス転換までの推定時間（現 FR 継続仮定。計算・判定には未使用）──
+            net_now = est_fr_now - cost
+            if net_now >= 0:
+                be_line = "   ✅ 既に黒字（プラス転換済み）"
+            else:
+                remaining   = -net_now  # まだ必要な額（正）
+                hourly_earn = current_net_fr * pos["size_usd"]  # 現 FR が続く仮定の時給($/h)
+                if hourly_earn <= 0:
+                    be_line = "   📍 プラスまでの時間: 未確定（現 FR ≤ 0）"
+                else:
+                    be_hours = remaining / hourly_earn
+                    # MAX_HOLD は未定義のため 72h を暫定閾値として使用
+                    if be_hours > 72:
+                        be_line = f"   ⚠ MAX_HOLD(72h) 超過見込み: プラスまで ~{be_hours:.1f}h"
+                    elif be_hours > 24:
+                        be_line = f"   ⚠ プラスまで ~{be_hours:.1f}h（長時間注意）"
+                    else:
+                        be_line = f"   📍 プラスまで あと ~{be_hours:.1f}h"
+
+            hold_lines.append(
+                f"🔵 {coin}  持ち続ける（{cost_tag}）\n"
+                f"   {hold_reason}\n"
+                f"   net FR {current_net_fr*100:+.4f}%/h　(HL受取 {hl_earn*100:+.4f}%/h ＋ {counter_name}受取 {counter_earn*100:+.4f}%/h)\n"
+                f"   保有 {dur_h:.1f}h　収益 ${est_fr_now:.2f} − 手数料 ${cost:.2f} = 手取り ${est_fr_now - cost:+.2f}\n"
+                f"{be_line}"
             )
             continue
 
+        # EXIT 条件: MIN_HOLD_H 経過後に net FR が負転落
         print(
-            f"[EXIT] {coin}  netFR={current_net_fr*100:.4f}%/h "
+            f"[EXIT] {coin}  netFR={current_net_fr*100:+.4f}%/h "
             f"(HL={hl_fr_now*100:+.4f}%/h, {counter_name}={counter_fr_now*100:+.4f}%/h) "
-            f"< {exit_threshold*100:.4f}% → 決済"
+            f"→ フリップ決済 (保有 {dur_h:.1f}h)"
+        )
+        tg(
+            f"🔴 {coin} 決済します\n"
+            f"理由: net FR がマイナスに転落（{current_net_fr*100:+.4f}%/h）\n"
+            f"HL受取 {hl_earn*100:+.4f}%/h ＋ {counter_name}受取 {counter_earn*100:+.4f}%/h\n"
+            f"保有時間: {dur_h:.1f}h　収益 ${est_fr_now:.2f} − 手数料 ${cost:.2f} = 手取り ${est_fr_now - cost:+.2f}"
         )
 
         # ── 実ポジション事前チェック ──
@@ -1013,7 +1094,7 @@ def main():
             counter_open_coins_now = lighter_client.get_positions()
             if counter_open_coins_now is None:
                 print(f"  [SKIP] {coin}: Lighter API失敗 → 今回は決済判断スキップ")
-                tg(f"⚠️ {coin} Lighter実ポジション取得失敗\n次のスキャンで再試行します")
+                tg(f"⚠️ {coin}: Lighter のポジション情報が取得できませんでした\n次のスキャンで再確認します")
                 continue
             counter_coins = {p["symbol"] for p in counter_open_coins_now}
         else:
@@ -1033,14 +1114,14 @@ def main():
             print(f"  {coin}: HL/{counter_name}両方ポジションなし → stateから削除")
             del positions[coin]
             save_state(state)
-            tg(f"🧹 ゴーストポジション削除: {coin}\nHL/{counter_name}両方にポジションなし\nstate.jsonをクリーンアップしました")
+            tg(f"🧹 {coin}: HL・{counter_name} 両方にポジションが見つかりません\n管理データから削除しました")
             continue
 
         # 片側のみポジションなし → 手動決済された可能性を通知
         if hl_has_pos and not counter_has_pos:
-            tg(f"⚠️ {coin}: {counter_name}側ポジションなし（手動決済？）\nHL側のみ決済を試行します")
+            tg(f"⚠️ {coin}: {counter_name} 側のポジションが見つかりません（手動決済された？）\nHL 側だけ決済します")
         elif not hl_has_pos and counter_has_pos:
-            tg(f"⚠️ {coin}: HL側ポジションなし（手動決済？）\n{counter_name}側のみ決済を試行します")
+            tg(f"⚠️ {coin}: HL 側のポジションが見つかりません（手動決済された？）\n{counter_name} 側だけ決済します")
 
         # HL決済
         hl_ok = False
@@ -1072,10 +1153,10 @@ def main():
                 try:
                     hl_force_close(exchange, info, coin, main_addr, sz_decimals_map)
                     print(f"  HL force close成功")
-                    tg(f"⚠️ HL 強制決済実行: {coin}\nmarket_close 3回失敗のためIOC指値注文で強制クローズしました")
+                    tg(f"⚠️ {coin}: 通常決済が3回失敗したため強制決済しました（HL）")
                     hl_ok = True
                 except Exception as fe:
-                    tg(f"⚠️ EXIT HL ERROR: {coin}\n3回失敗 + 強制決済も失敗\n手動確認してください")
+                    tg(f"🚨 {coin}: HL の決済が完全に失敗しました\nHL を直接確認してください")
                     send_gmail(
                         subject=f"[MindRaid] ⚠️ EXIT HL FAILED: {coin}",
                         body=f"HL決済が完全に失敗しました。手動で確認・決済してください。\n\n銘柄: {coin}\n時刻: {ts} UTC\nエラー: {fe}"
@@ -1116,10 +1197,10 @@ def main():
                 try:
                     counter_force_close(ct_client, coin, direction, pos)
                     print(f"  {counter_name} force close成功")
-                    tg(f"⚠️ {counter_name} 強制決済実行: {coin}\n通常クローズ 3回失敗のため強制クローズしました")
+                    tg(f"⚠️ {coin}: 通常決済が3回失敗したため強制決済しました（{counter_name}）")
                     counter_ok = True
                 except Exception as mfe:
-                    tg(f"⚠️ EXIT {counter_name} ERROR: {coin}\n3回失敗 + 強制決済も失敗\n手動確認してください")
+                    tg(f"🚨 {coin}: {counter_name} の決済が完全に失敗しました\n{counter_name} を直接確認してください")
                     send_gmail(
                         subject=f"[MindRaid] ⚠️ EXIT {counter_name} FAILED: {coin}",
                         body=f"{counter_name}決済が完全に失敗しました。手動で確認・決済してください。\n\n銘柄: {coin}\n時刻: {ts} UTC\nエラー: {mfe}"
@@ -1156,13 +1237,11 @@ def main():
             check_losing_streak(state, tg, n=3)
 
             tg(
-                f"🔴 EXIT: {coin}\n"
-                f"保有: {dur_h:.1f}h\n"
-                f"現在net FR: {current_net_fr:+.4%}/h\n"
-                f"現在HL FR: {hl_fr_now:+.4%}/h  {counter_name} FR: {counter_fr_now:+.4%}/h\n"
-                f"推定FR収益: ${est_fr:.2f}\n"
-                f"手数料: ${est_cost:.2f}\n"
-                f"推定net: ${net:.2f}\n"
+                f"🔴 {coin} 決済完了\n"
+                f"理由: net FR がマイナスに転落（{current_net_fr*100:+.4f}%/h）\n"
+                f"保有時間: {dur_h:.1f}h\n"
+                f"HL {hl_fr_now*100:+.4f}%/h / {counter_name} {counter_fr_now*100:+.4f}%/h\n"
+                f"FR収益: ${est_fr:.2f}　手数料: ${est_cost:.2f}　手取り: ${net:.2f}\n"
                 f"\n🔍 HL と {counter_name} 両取引所でポジションが実際にクローズされているか直接確認してください。"
             )
             post_x(
@@ -1200,6 +1279,10 @@ def main():
                 f"\n🚨 至急: HL と {counter_name} 両取引所の板を直接確認し、片側裸ポジションの有無をチェックしてください。必要なら手動でクローズを。"
             )
 
+    # ── HOLD サマリー通知 ──────────────────────────────────────
+    if hold_lines:
+        tg("📊 保有ポジション状況\n" + "\n".join(hold_lines))
+
     # ── エントリーチェック ──────────────────────────────────────
     # まず候補を抽出して netFR 降順でソート（MAX_POSITIONS 到達時に最優位を取りこぼさない）
     entry_candidates = []  # [(avg_net_fr_1h, coin, rows, direction, selected_net)]
@@ -1228,6 +1311,12 @@ def main():
             continue
         avg_net_fr_1h = sum(selected_net) / len(selected_net)
         if avg_net_fr_1h < MIN_FR_1H:
+            continue
+        # スパイク除去: 片側 FR が |0.5%/h| 超の銘柄は平均回帰しやすく負けやすい
+        avg_hl_fr_entry = sum(float(r["hl_fr_1h"]) for r in rows) / len(rows)
+        avg_ctr_fr_entry = sum(float(r.get("counter_fr_1h", r.get("mexc_fr_1h", 0))) for r in rows) / len(rows)
+        if abs(avg_hl_fr_entry) > MAX_LEG_FR or abs(avg_ctr_fr_entry) > MAX_LEG_FR:
+            print(f"[SKIP] {coin} 片側FRスパイク (HL={avg_hl_fr_entry*100:+.3f}%/h, ctr={avg_ctr_fr_entry*100:+.3f}%/h, 上限={MAX_LEG_FR*100:.2f}%/h)")
             continue
         entry_candidates.append((avg_net_fr_1h, coin, rows, direction, selected_net))
 
@@ -1446,14 +1535,13 @@ def main():
             ct_size_str = f"({ct_res['size_coin']} coins)"
 
         tg(
-            f"🟢 ENTRY: {coin}\n"
-            f"方向: {side_label}\n"
+            f"🟢 {coin} エントリー完了\n"
+            f"戦略: {side_label}\n"
             f"net FR: {avg_net_fr_1h:.4%}/h\n"
-            f"HL FR: {avg_hl_fr_1h:+.4%}/h  {counter_name_enter} FR: {avg_counter_fr_1h:+.4%}/h\n"
-            f"Size: ${TRADE_SIZE_USD}\n"
-            f"HL @ {hl_res['entry_price']:.6f}  ({hl_res['size_coin']} coins)\n"
-            f"{counter_name_enter} @ {ct_res['entry_price']:.6f}  {ct_size_str}\n"
-            f"\n🔍 HL と {counter_name_enter} 両取引所の板でポジションが実際に約定しているか直接確認してください。"
+            f"HL {avg_hl_fr_1h:+.4%}/h / {counter_name_enter} {avg_counter_fr_1h:+.4%}/h\n"
+            f"サイズ: ${TRADE_SIZE_USD}\n"
+            f"HL約定価格: {hl_res['entry_price']:.6f}  {counter_name_enter}約定価格: {ct_res['entry_price']:.6f}\n"
+            f"\n🔍 HL と {counter_name_enter} 両取引所でポジションが実際に建っているか直接確認してください。"
         )
         post_x(
             f"🟢 FR Arb エントリー #{coin}\n"

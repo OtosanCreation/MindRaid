@@ -17,6 +17,11 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from hyperliquid.info import Info
 import ccxt
+try:
+    from taker_bot import fetch_lighter_actual_funding, fetch_hl_actual_funding
+    _ACTUAL_FUNDING_AVAILABLE = True
+except Exception:
+    _ACTUAL_FUNDING_AVAILABLE = False
 
 
 def fetch_hl_positions(address: str) -> list:
@@ -173,25 +178,36 @@ def load_taker_state() -> dict:
     return {}
 
 
-def calc_position_stats(state_pos: dict, now: datetime) -> dict:
+def calc_position_stats(state_pos: dict, now: datetime, coin: str = None, hl_address: str = None) -> dict:
     """
     1ポジション分の損益・BE を計算。
-    state_pos: taker_state.json の 1エントリー
-    now: UTC datetime
-    返却:
-      hours_held, est_funding_usd, total_cost_usd, est_net_usd,
-      be_hours, be_eta_str, be_remaining_h
+    coin/hl_address が渡された場合は実際の funding API から取得（正確値）。
+    なければ entry_net_fr_1h × 保有時間で推定。
     """
     try:
         opened_at  = datetime.strptime(state_pos["opened_at"], "%Y-%m-%d %H:%M:%S")
         hours_held = (now - opened_at).total_seconds() / 3600
         net_fr     = float(state_pos.get("entry_net_fr_1h", 0))
         size_usd   = float(state_pos.get("size_usd", 90))
+        direction  = state_pos.get("direction", "short_fr")
 
         # Lighter モードは HL 側のみ taker 手数料
-        total_cost_usd  = HL_COST_RT * size_usd
-        est_funding_usd = net_fr * hours_held * size_usd
-        est_net_usd     = est_funding_usd - total_cost_usd
+        total_cost_usd = HL_COST_RT * size_usd
+
+        # 実際の funding API で取得できる場合はそちらを優先
+        if _ACTUAL_FUNDING_AVAILABLE and coin and hl_address:
+            try:
+                _info = Info(skip_ws=True)
+                _now_str = now.strftime("%Y-%m-%d %H:%M:%S")
+                _hl_fund = fetch_hl_actual_funding(_info, hl_address, coin, state_pos["opened_at"], _now_str)
+                _lt_fund = fetch_lighter_actual_funding(coin, state_pos["opened_at"], _now_str, size_usd, direction)
+                est_funding_usd = _hl_fund + _lt_fund
+            except Exception:
+                est_funding_usd = net_fr * hours_held * size_usd
+        else:
+            est_funding_usd = net_fr * hours_held * size_usd
+
+        est_net_usd = est_funding_usd - total_cost_usd
 
         if net_fr > 0:
             be_hours       = total_cost_usd / (net_fr * size_usd)
@@ -215,18 +231,21 @@ def calc_position_stats(state_pos: dict, now: datetime) -> dict:
         return {}
 
 
-def build_position_section(hl_positions: list, counter_positions: list, now: datetime = None) -> list:
-    lines = ["📊 <b>現在のポジション</b>"]
+EXIT_FR_1H        = 0.0002   # コスト未回収時の決済閾値
+EXIT_FR_RECOVERED = 0.0001   # コスト回収済み後の決済閾値
+
+
+def build_position_section(hl_positions: list, counter_positions: list, now: datetime = None, hl_address: str = None) -> list:
+    lines = ["📊 <b>今持ってるポジション</b>"]
     now = now or datetime.utcnow()
 
     if not hl_positions and not counter_positions:
-        lines.append(f"  HL / {COUNTER_NAME}: ポジションなし")
+        lines.append("  今は何も持っていません")
         lines.append("")
         return lines
 
     state_positions = load_taker_state()
-
-    # HLポジション
+    net_rates = load_latest_net_rates()
     hl_by_coin = {p["coin"]: p for p in (hl_positions or [])}
     ct_by_coin = {(p.get("coin") or p.get("symbol","")): p for p in (counter_positions or [])}
     all_coins  = sorted(set(list(hl_by_coin.keys()) + list(ct_by_coin.keys())))
@@ -237,59 +256,60 @@ def build_position_section(hl_positions: list, counter_positions: list, now: dat
         hl = hl_by_coin.get(coin)
         ct = ct_by_coin.get(coin)
         sp = state_positions.get(coin, {})
-        stats = calc_position_stats(sp, now) if sp else {}
+        stats = calc_position_stats(sp, now, coin=coin, hl_address=hl_address) if sp else {}
+        nr = net_rates.get(coin)
 
-        if hl:
-            pnl  = hl["unrealized_pnl"]
-            fund = hl["funding"]
-            lines.append(
-                f"  {'🟢' if hl['side']=='SHORT' else '🔴'} HL {coin} {hl['side']}"
-                f"  {hl['size']:.4f}枚 @ ${hl['entry_px']:.4f}"
-                f"\n    未実現PNL: <code>{s(pnl)}$</code>"
-                f"  累計FR受取: <code>{s(fund)}$</code>"
-            )
-        if ct:
-            pnl  = float(ct.get("unrealized_pnl", 0))
-            side = ct.get("side", "")
-            size = float(ct.get("size") or ct.get("contracts", 0))
-            ep   = float(ct.get("entry_price") or ct.get("entry_px", 0))
-            lines.append(
-                f"  {'🔴' if side=='LONG' else '🟢'} {COUNTER_NAME} {coin} {side}"
-                f"  {size:.4f}枚 @ ${ep:.4f}"
-                f"\n    未実現PNL: <code>{s(pnl)}$</code>"
-            )
-
-        # 損益サマリー行（HL + Lighter 両建て合算）
         if stats:
             hl_pnl_v  = hl["unrealized_pnl"] if hl else 0.0
             ct_pnl_v  = float(ct.get("unrealized_pnl", 0)) if ct else 0.0
-            price_pnl = hl_pnl_v + ct_pnl_v   # 完全ヘッジなら≒0
+            price_pnl = hl_pnl_v + ct_pnl_v
             est_net   = stats["est_net_usd"]
             held_h    = stats["hours_held"]
             be_rem    = stats["be_remaining_h"]
+            cost_recovered = stats["est_funding_usd"] >= stats["total_cost_usd"]
+            exit_thr  = EXIT_FR_RECOVERED if cost_recovered else EXIT_FR_1H
 
-            if be_rem is not None and be_rem > 0:
-                be_line = f"損益分岐: あと<code>{be_rem:.1f}h</code> ({stats['be_eta_str']})"
-            elif be_rem is not None:
-                be_line = f"損益分岐: 到達済み ✅ ({stats['be_eta_str']} 超)"
+            if cost_recovered:
+                cost_line = "手数料: 回収済み ✅"
+            elif be_rem is not None and be_rem > 0:
+                cost_line = f"手数料回収まで: あと <code>{be_rem:.1f}h</code>"
+            elif be_rem is not None and be_rem <= 0:
+                cost_line = "手数料: 未回収（FR変動で想定外れ）"
             else:
-                be_line = "損益分岐: 計算不可"
+                cost_line = ""
+
+            # net FR と EXIT 閾値比較
+            if nr:
+                direction = sp.get("direction", "short_fr")
+                current_net = float(nr["net_short_1h"] if direction == "short_fr" else nr["net_long_1h"])
+                ratio = current_net / exit_thr if exit_thr > 0 else 0
+                hold_exit = "保有継続 ✅" if current_net >= exit_thr else "決済対象 🔴"
+                thr_note = "（手数料回収後なので緩め）" if cost_recovered else "（回収前）"
+                fr_line = (
+                    f"net FR <code>{current_net*100:+.4f}%/h</code>"
+                    f"  決済基準 <code>{exit_thr*100:.4f}%/h</code>{thr_note} の <code>{ratio:.1f}倍</code> → {hold_exit}"
+                )
+            else:
+                fr_line = "net FR: データなし"
 
             lines.append(
-                f"  💰 {coin}  保有<code>{held_h:.1f}h</code>"
-                f" | 推定FR収益: <code>{s(stats['est_funding_usd'])}$</code>"
-                f" | 手数料: <code>-{stats['total_cost_usd']:.2f}$</code>"
-                f"\n    推定net: <code>{s(est_net)}$</code>"
-                f" | 価格PNL合算: <code>{s(price_pnl)}$</code>"
-                f"\n    {be_line}"
+                f"  💰 {coin}  保有 <code>{held_h:.1f}h</code>  {cost_line}\n"
+                f"    {fr_line}\n"
+                f"    FR収益: <code>{s(stats['est_funding_usd'])}$</code>"
+                f"  手数料: <code>-{stats['total_cost_usd']:.2f}$</code>"
+                f"  手取り: <code>{s(est_net)}$</code>\n"
+                f"    価格変動の影響: <code>{s(price_pnl)}$</code>（ほぼゼロが正常）"
             )
+        else:
+            if hl:
+                lines.append(f"  💰 {coin}  HL {hl['side']}  含み益: <code>{s(hl['unrealized_pnl'])}$</code>")
         lines.append("")
 
     return lines
 
 TAKER_RT     = 0.00035 * 2   # 0.070%
 MAKER_RT     = 0.00010 * 2   # 0.020%
-ENTRY_FR     = 0.0004         # エントリー閾値: 0.04%/h
+ENTRY_FR     = 0.0002         # エントリー閾値: 0.02%/h（バックテスト最適値）
 EXCHANGE_MODE = os.environ.get("EXCHANGE_MODE", "LIGHTER").upper()
 DATA_DIR     = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 HL_FUNDING_CSV      = os.path.join(DATA_DIR, "funding_log.csv")
@@ -397,7 +417,7 @@ def send_message(token, chat_id, text):
         return json.loads(resp.read())
 
 
-def build_message(rows, now_str, hl_positions=None, counter_positions=None, net_rates=None, now: datetime = None):
+def build_message(rows, now_str, hl_positions=None, counter_positions=None, net_rates=None, now: datetime = None, hl_address: str = None):
     sorted_long  = sorted([r for r in rows if r["rate"] < 0], key=lambda r: r["rate"])
     sorted_short = sorted([r for r in rows if r["rate"] > 0], key=lambda r: r["rate"], reverse=True)
     maker_total = sum(1 for r in rows if abs(r["rate"]) > MAKER_RT)
@@ -411,10 +431,8 @@ def build_message(rows, now_str, hl_positions=None, counter_positions=None, net_
         return "TAKER超え" if abs(rate) > threshold else "参考"
 
     lines = [
-        f"<b>⚡ MindRaid Alert</b>  {now_str} UTC",
-        f"対象 {len(rows)}銘柄 (HL∩Lighter) | MAKER超え: {maker_total}銘柄 | "
-        f"エントリー判定: net FR (HL-{COUNTER_NAME}) ≥ {ENTRY_FR*100:.2f}%/h",
-        f"🖥 <i>取引エンジン: ローカル運用中（GitHubはデータ収集のみ）</i>",
+        f"<b>⚡ MindRaid</b>  {now_str} UTC",
+        f"スキャン対象 {len(rows)}銘柄 | 稼ぎ率が基準（{ENTRY_FR*100:.2f}%/h）を超えてる銘柄: {maker_total}銘柄",
         "",
     ]
 
@@ -423,18 +441,17 @@ def build_message(rows, now_str, hl_positions=None, counter_positions=None, net_
 
     entry_candidates = []
 
-    def format_top_row_by_net(coin, side_net, hl_rate, ct_rate, side, open_coins):
-        """TOP3 の1行フォーマット（netFR ベース）。常に netFR を表示する。"""
-        marker = "⚡" if side_net >= ENTRY_FR else " "
-        held = "  ⚡保有中" if coin in open_coins else ""
+    def format_top_row_by_net(coin, side_net, hl_rate, ct_rate, open_coins):
+        held = "  ← 今持ってる" if coin in open_coins else ""
+        flag = "⚡" if side_net >= ENTRY_FR else " "
+        ratio = side_net / ENTRY_FR if ENTRY_FR > 0 else 0
         return (
-            f"  {marker} {coin}  net:<code>{pct(side_net)}</code>/h"
-            f"  (HL:<code>{pct(hl_rate)}</code> / {COUNTER_NAME}:<code>{pct(ct_rate)}</code>){held}"
+            f"  {flag} {coin}  net FR <code>{pct(side_net)}</code>/h（基準{ENTRY_FR*100:.2f}%の{ratio:.1f}倍）"
+            f"  HL <code>{pct(hl_rate)}</code> / {COUNTER_NAME} <code>{pct(ct_rate)}</code>{held}"
         )
 
-    # net_rates から SHORT 機会（net_short_1h 降順）/ LONG 機会（net_long_1h 降順）を構築
-    short_ops = []   # HL SHORT × Counter LONG
-    long_ops  = []   # HL LONG × Counter SHORT
+    short_ops = []
+    long_ops  = []
     for coin, nr in net_rates.items():
         short_ops.append((coin, float(nr["net_short_1h"]), float(nr["hl_fr_1h"]), float(nr["counter_fr_1h"])))
         long_ops.append((coin, float(nr["net_long_1h"]), float(nr["hl_fr_1h"]), float(nr["counter_fr_1h"])))
@@ -442,52 +459,67 @@ def build_message(rows, now_str, hl_positions=None, counter_positions=None, net_
     long_ops.sort(key=lambda x: x[1], reverse=True)
 
     if short_ops:
-        lines.append(f"🟢 <b>SHORT機会 TOP3</b> (HL SHORT × {COUNTER_NAME} LONG, netFR降順)")
+        lines.append(f"🟢 <b>net FR TOP3（売り戦略 / 基準 {ENTRY_FR*100:.2f}%/h以上でエントリー）</b>")
         for coin, sn, hr, cr in short_ops[:3]:
-            lines.append(format_top_row_by_net(coin, sn, hr, cr, "SHORT", open_coins))
+            lines.append(format_top_row_by_net(coin, sn, hr, cr, open_coins))
         lines.append("")
 
     if long_ops:
-        lines.append(f"🔴 <b>LONG機会 TOP3</b> (HL LONG × {COUNTER_NAME} SHORT, netFR降順)")
+        lines.append(f"🔴 <b>net FR TOP3（買い戦略 / 基準 {ENTRY_FR*100:.2f}%/h以上でエントリー）</b>")
         for coin, ln, hr, cr in long_ops[:3]:
-            lines.append(format_top_row_by_net(coin, ln, hr, cr, "LONG", open_coins))
+            lines.append(format_top_row_by_net(coin, ln, hr, cr, open_coins))
         lines.append("")
 
+    # ── [D ブロック] エントリー候補予告：Phase 6 以降は taker_bot の ENTRY 通知で十分のため停止 ──
+    # taker_bot.py がエントリー実施時に個別通知するため、事前予告は重複。戻す場合はこのブロックを uncomment。
     # 次スキャンで継続なら候補（実際のtaker_botと同じく net FR 優位側で判定）
-    for r in rows:
-        coin = r["coin"]
-        if coin in open_coins:
-            continue
-        net = net_rates.get(coin)
-        if not net:
-            continue
-        short_net = float(net["net_short_1h"])
-        long_net = float(net["net_long_1h"])
-        best_side = "SHORT" if short_net >= long_net else "LONG"
-        best_net = max(short_net, long_net)
-        if best_net >= ENTRY_FR:
-            entry_candidates.append((coin, best_side, best_net, short_net, long_net))
+    # for r in rows:
+    #     coin = r["coin"]
+    #     if coin in open_coins:
+    #         continue
+    #     net = net_rates.get(coin)
+    #     if not net:
+    #         continue
+    #     short_net = float(net["net_short_1h"])
+    #     long_net = float(net["net_long_1h"])
+    #     best_side = "SHORT" if short_net >= long_net else "LONG"
+    #     best_net = max(short_net, long_net)
+    #     if best_net >= ENTRY_FR:
+    #         entry_candidates.append((coin, best_side, best_net, short_net, long_net))
+    #
+    # entry_candidates.sort(key=lambda x: x[2], reverse=True)
+    # # MAX_POSITIONS 到達時は「エントリー予定」セクションを出さない（どうせ買えない）
+    # try:
+    #     from taker_bot import MAX_POSITIONS as _MAX_POS
+    # except Exception:
+    #     _MAX_POS = 4
+    # at_capacity = len(open_coins) >= _MAX_POS
+    # if at_capacity:
+    #     lines.append(f"⛔ <b>ポジション満杯（{_MAX_POS}銘柄）→ 新規購入なし</b>")
+    #     lines.append("")
+    # elif entry_candidates:
+    #     lines.append("🎯 <b>次のスキャンでも続いてたら買う予定</b>")
+    #     for coin, side, best_net, short_net, long_net in entry_candidates[:5]:
+    #         side_jp = "売り戦略" if side == "SHORT" else "買い戦略"
+    #         lines.append(
+    #             f"  → {coin}（{side_jp}）稼ぎ率 <code>{pct(best_net)}</code>/h"
+    #         )
+    #     lines.append("")
+    # else:
+    #     lines.append("ℹ️ <b>今は買える銘柄なし</b>")
+    #     lines.append("")
 
-    entry_candidates.sort(key=lambda x: x[2], reverse=True)
-    if entry_candidates:
-        lines.append("🎯 <b>次のスキャンで継続ならエントリー予定</b>")
-        for coin, side, best_net, short_net, long_net in entry_candidates[:5]:
-            lines.append(
-                f"  → {coin}  HL {side}  net:<code>{pct(best_net)}</code>/h"
-                f" (short:<code>{pct(short_net)}</code> / long:<code>{pct(long_net)}</code>)"
-            )
-        lines.append("")
-    else:
-        lines.append("ℹ️ <b>net FR基準のエントリー候補なし</b>")
-        lines.append("")
+    # ── [E ブロック] ポジションスナップショット：Phase 6 以降は taker_bot の HOLD 通知で十分のため停止 ──
+    # build_position_section() 関数本体は残す（将来戻す場合はここを uncomment）
+    # pos_lines = build_position_section(hl_positions or [], counter_positions or [], now=now, hl_address=hl_address)
+    # lines.extend(pos_lines)
 
-    pos_lines = build_position_section(hl_positions or [], counter_positions or [], now=now)
-    lines.extend(pos_lines)
-
-    stuck_warnings = check_stuck_pnl(counter_positions or [])
-    if stuck_warnings:
-        lines.extend(stuck_warnings)
-        lines.append("")
+    # Lighter は PNL 計算が信頼できるため stuck チェック不要（MEXC 専用）
+    if EXCHANGE_MODE != "LIGHTER":
+        stuck_warnings = check_stuck_pnl(counter_positions or [])
+        if stuck_warnings:
+            lines.extend(stuck_warnings)
+            lines.append("")
 
     return "\n".join(lines)
 
@@ -533,6 +565,7 @@ def main():
         counter_positions=counter_positions,
         net_rates=net_rates,
         now=now_dt,
+        hl_address=hl_address,
     )
     print("--- Message preview ---")
     print(msg)
