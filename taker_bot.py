@@ -1555,13 +1555,7 @@ def main():
             f"約定価格: HL {hl_res['entry_price']:.6f} / {counter_name_enter} {ct_res['entry_price']:.6f}\n"
             f"\n※ HLと{counter_name_enter}両方でポジションが立っているか念のため確認してください"
         )
-        post_x(
-            f"🟢 新しく買った #{coin}\n"
-            f"作戦: {strategy_jp}（価格変動を打ち消して金利だけ取る）\n"
-            f"時給: +${hourly_usd:.3f}（1日 +${daily_usd:.2f}）\n"
-            f"資金: ${TRADE_SIZE_USD}\n"
-            f"#FRアービトラージ #仮想通貨"
-        )
+        # post_x: エントリー時は投稿しない（コスト削減）
         send_gmail(
             subject=f"[MindRaid] ENTRY: {coin}  {side_label}",
             body=(
