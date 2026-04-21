@@ -1,0 +1,14 @@
+[
+  {
+    "date_utc": "2026-04-21",
+    "timestamp_utc": "2026-04-21 14:10:25",
+    "hl_total": 613.24,
+    "hl_usdc": 491.59,
+    "hl_spot": 121.65,
+    "lighter_total": 380.37,
+    "n": 4,
+    "wins": 1,
+    "losses": 3,
+    "real_trade": 871.96
+  }
+]
