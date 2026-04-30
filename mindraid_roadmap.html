@@ -40,12 +40,16 @@
   .profit-box .label { color: #555; margin-bottom: 4px; }
   .profit-box .value { color: #2ecc71; font-size: 1.1em; }
   .warn-box { margin-top: 12px; background: #1a1300; border: 1px solid #f5a62322; border-radius: 6px; padding: 10px 14px; font-size: 0.8em; color: #f5a623aa; }
+  .info-box { margin-top: 12px; background: #0a0f1a; border: 1px solid #4a9eff33; border-radius: 6px; padding: 12px 16px; font-size: 0.82em; }
+  .info-box .label { color: #555; margin-bottom: 4px; }
+  .info-box .value { color: #4a9eff; }
   .summary { max-width: 800px; margin: 40px auto 0; background: #111; border: 1px solid #f5a62333; border-radius: 8px; padding: 24px; text-align: center; }
   .summary h2 { color: #f5a623; margin-bottom: 16px; font-size: 1em; letter-spacing: 2px; }
   .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
   .s-label { font-size: 0.75em; color: #555; margin-bottom: 4px; }
   .s-value { font-size: 1.2em; color: #fff; }
   .footer { text-align: center; margin-top: 40px; color: #333; font-size: 0.75em; }
+  .section-label { font-size: 0.72em; color: #555; text-transform: uppercase; letter-spacing: 2px; margin: 12px 0 4px; }
 </style>
 </head>
 <body>
@@ -53,8 +57,8 @@
 <div class="header">
   <h1>⚡ MindRaid</h1>
   <p>非エンジニアが Claude Code で作る アービトラージシステム</p>
-  <p style="color:#444;margin-top:6px;font-size:0.8em;">2026-04-19 更新</p>
-  <p style="color:#f5a623;margin-top:4px;font-size:0.75em;">Phase 5 稼働中 — HL × Lighter DEX / $90/pos × 最大4 / ローカルCron 30分スキャン / N=7 全勝 累計 +$3.17</p>
+  <p style="color:#444;margin-top:6px;font-size:0.8em;">2026-04-24 更新</p>
+  <p style="color:#f5a623;margin-top:4px;font-size:0.75em;">Phase 6 稼働中 — HL × Lighter DEX / $90/pos × 最大4 / 4/24 戦略刷新 N=0 リスタート</p>
 </div>
 
 <div class="timeline">
@@ -90,7 +94,6 @@
         <li class="done-task"><span class="icon">✓</span>X API 連携 → 毎時自動ツイート（画像付き）</li>
         <li class="done-task"><span class="icon">✓</span>Telegram アラート（TAKER超え銘柄を即通知）</li>
         <li class="done-task"><span class="icon">✓</span>銘柄追加（BTC / ETH / SOL / DOGE / XRP）</li>
-        <li class="todo"><span class="icon">▸</span>フォロワー 100 人突破（継続中）</li>
       </ul>
     </div>
   </div>
@@ -107,16 +110,11 @@
         <li class="done-task"><span class="icon">✓</span>Bitflyer → HL へ <strong style="color:#555">0.5 ETH</strong> 送金</li>
         <li class="done-task"><span class="icon">✓</span>ETH ショートポジション構築（POS-001）― HL単体テスト</li>
         <li class="done-task"><span class="icon">✓</span>損益・FR の自動ログ（GitHub Actions 毎時）</li>
-        <li class="done-task"><span class="icon">✓</span>FR Arb 日次実績を X に自動投稿（JST 8:00）</li>
         <li class="done-task"><span class="icon">✓</span>HL 全 229 銘柄 FR 収集に拡張</li>
         <li class="done-task"><span class="icon">✓</span>MEXC HL共通 191 銘柄 FR 収集に拡張</li>
         <li class="done-task"><span class="icon">✓</span>HL × MEXC スプレッドデータ蓄積（〜4/10）</li>
         <li class="done-task"><span class="icon">✓</span>データ分析完了 → taker戦略設計（2回連続確認・勝率94%）</li>
       </ul>
-      <div class="profit-box">
-        <div class="label">Phase 3 実績（ETH単体テスト）</div>
-        <div class="value">累積 +0.369 ETH 分の FR 収益確認</div>
-      </div>
     </div>
   </div>
 
@@ -129,10 +127,7 @@
         <span class="phase-meta">4/10〜4/17</span>
       </div>
       <ul class="tasks">
-        <li class="done-task"><span class="icon">✓</span>taker_bot.py 実装（2回連続確認・双方向エントリー）</li>
-        <li class="done-task"><span class="icon">✓</span>スキャン間隔 30分（cron-job.org外部トリガー）</li>
-        <li class="done-task"><span class="icon">✓</span>HL × MEXC 両脚エントリー・自動決済ロジック</li>
-        <li class="done-task"><span class="icon">✓</span>Telegram通知（ポジション・PNL表示）</li>
+        <li class="done-task"><span class="icon">✓</span>taker_bot.py 実装（双方向エントリー・自動決済）</li>
         <li class="done-task"><span class="icon">✓</span>ゴースト検知・force close フォールバック</li>
         <li class="done-task"><span class="icon">✓</span>12日分データ蓄積 → バックテストで最適閾値算出</li>
       </ul>
@@ -143,49 +138,92 @@
     </div>
   </div>
 
+  <div class="phase done">
+    <div class="phase-dot">✓</div>
+    <div class="phase-card">
+      <div class="phase-header">
+        <span class="phase-tag tag-done">DONE</span>
+        <span class="phase-title">Phase 5 ── Lighter DEX 移行 &amp; 初期稼働</span>
+        <span class="phase-meta">4/17〜4/23</span>
+      </div>
+      <ul class="tasks">
+        <li class="done-task"><span class="icon">✓</span>Lighter DEX SDK 統合（lighter_client.py 実装）</li>
+        <li class="done-task"><span class="icon">✓</span>EXCHANGE_MODE で MEXC / Lighter 切替可能に</li>
+        <li class="done-task"><span class="icon">✓</span>Lighter 口座に $360 デポジット・$90/pos × 4 運用開始</li>
+        <li class="done-task"><span class="icon">✓</span>署名鍵スロット分離（bot=slot2 / UI=slot0）→ 不一致ループ根本解決</li>
+        <li class="done-task"><span class="icon">✓</span>P&amp;L を実 Funding API ベースで計算（HL userFunding + Lighter CSV実績）</li>
+        <li class="done-task"><span class="icon">✓</span>3連敗検知・Telegram 通知・Gmail アラート体制整備</li>
+        <li class="done-task"><span class="icon">✓</span>daily_equity_report.py 実装（毎日23時 JST に Telegram へ HL/Lighter 残高・前日比送信）</li>
+        <li class="done-task"><span class="icon">✓</span>N=20 (4/20-4/23) で実運用データ蓄積 → 負けパターン解析</li>
+      </ul>
+      <div class="profit-box">
+        <div class="label">Phase 5 教訓（N=20 分析）</div>
+        <div class="value">見かけ勝率 80% / 実 net -$0.455 → 「コスト回収前の早切り」が主因<br>
+        <span style="font-size:0.9em;color:#2ecc71aa;">→ BE-hold 戦略 + フィルター強化で構造的に解決</span></div>
+      </div>
+    </div>
+  </div>
+
   <div class="phase active">
     <div class="phase-dot">▶</div>
     <div class="phase-card">
       <div class="phase-header">
         <span class="phase-tag tag-active">NOW</span>
-        <span class="phase-title">Phase 5 ── Lighter DEX 移行 &amp; 本番稼働</span>
-        <span class="phase-meta">4/17〜</span>
+        <span class="phase-title">Phase 6 ── 戦略刷新 &amp; N=50 検証</span>
+        <span class="phase-meta">4/24〜（N=50 目標）</span>
       </div>
+
+      <div class="section-label">4/24 戦略刷新（完了）</div>
       <ul class="tasks">
-        <li class="done-task"><span class="icon">✓</span>Lighter DEX SDK 統合（lighter_client.py 実装）</li>
-        <li class="done-task"><span class="icon">✓</span>EXCHANGE_MODE で MEXC / Lighter 切替可能に</li>
-        <li class="done-task"><span class="icon">✓</span>taker_bot / funding_logger / telegram_alert を Lighter 対応</li>
-        <li class="done-task"><span class="icon">✓</span>Privy Embedded Wallet → MetaMask → Arbitrum Bridge 経由で入金</li>
-        <li class="done-task"><span class="icon">✓</span>Lighter 口座に $211 デポジット完了</li>
-        <li class="done-task"><span class="icon">✓</span>HL API Wallet (taker_bot) 発行・account_address 対応</li>
-        <li class="done-task"><span class="icon">✓</span>バックテスト最適化（MIN_FR=0.05%/h, confirm=2, max_hold=72h）</li>
-        <li class="done-task"><span class="icon">✓</span>MEXC ロギング停止（Lighter 専用運用へ）</li>
-        <li class="done-task"><span class="icon">✓</span>価格スケール・base_amount スケールバグ修正（銘柄ごとの price_decimals / size_decimals 対応）</li>
-        <li class="done-task"><span class="icon">✓</span>スプレッド判定を abs() で双方向チェック（異常価格による誤エントリー防御）</li>
-        <li class="done-task"><span class="icon">✓</span>GitHub Actions の Lighter ジオブロック問題解決 → ローカル launchd に移行</li>
-        <li class="done-task"><span class="icon">✓</span>trades.csv トレード履歴記録 + HL実 funding API 取得（FB ループ基盤）</li>
-        <li class="done-task"><span class="icon">✓</span>3連敗検知 → Telegram 自動通知</li>
-        <li class="done-task"><span class="icon">✓</span>Telegram FR サマリーを Lighter 対応銘柄のみに絞り込み（net不明 排除）</li>
-        <li class="done-task"><span class="icon">✓</span>MAX_POSITIONS 2→4 拡張（4/18、$360運用開始）</li>
-        <li class="done-task"><span class="icon">✓</span>エントリー候補 netFR 降順ソート（最高利回り優先）</li>
-        <li class="done-task"><span class="icon">✓</span>Telegram通知強化：SHORT/LONG TOP3、損益分岐時刻、現P&amp;L表示</li>
-        <li class="done-task"><span class="icon">✓</span>Lighter leverage 1x 固定（update_leverage呼び出し追加）</li>
-        <li class="done-task"><span class="icon">✓</span>署名鍵不一致 startup guard（system_setup.py 冪等化）</li>
-        <li class="done-task"><span class="icon">✓</span>Lighter API鍵スロット分離（bot=slot2 / UI=slot0）→ 署名鍵不一致を根本解決（4/19）</li>
-        <li class="done-task"><span class="icon">✓</span>署名鍵不一致の自律修復（system_setup.setup_force() 自動実行）</li>
-        <li class="done-task"><span class="icon">✓</span>P&amp;L計算を実 Funding API ベースに修正（entry FR定数推定 → HL userFunding + Lighter CSV実績値）</li>
-        <li class="done-task"><span class="icon">✓</span>Telegram通知を平易な表現に刷新（稼ぎ率・やめる基準・倍率・手取りを明記）</li>
-        <li class="done-task"><span class="icon">✓</span>MAX_POSITIONS到達時の不要セクション抑制・HOLD/EXIT判断理由の自動付記</li>
-        <li class="active-task"><span class="icon">▸</span>taker_bot 本番稼働中（$90/pos × 最大4 / MIN_FR=0.04%/h）N=7 全勝 累計 +$3.17</li>
-        <li class="active-task"><span class="icon">▸</span>HL×Lighter 共通 92銘柄 FR 蓄積中（30分ごと）</li>
-        <li class="active-task"><span class="icon">▸</span>Gmail / Telegram 通知体制稼働（取引完了・自律修復アラート）</li>
+        <li class="done-task"><span class="icon">✓</span>BE-hold exit: 累積funding ≥ cost×1.2 まで FR 反転でも保有継続</li>
+        <li class="done-task"><span class="icon">✓</span>緊急カット: net_fr &lt; -0.05%/h の大幅逆転時は即 EXIT（最悪損失 ~-$0.27/pos に封印）</li>
+        <li class="done-task"><span class="icon">✓</span>タイムアウト: 24h 経過で BE 未達なら強制損切り（塩漬け防止）</li>
+        <li class="done-task"><span class="icon">✓</span>エントリー閾値引き上げ: 0.005%/h → 0.015%/h（BE 時間 ~4.7h 目安）</li>
+        <li class="done-task"><span class="icon">✓</span>レジームストップ: 市場候補 &lt; 3銘柄のサイクルは新規エントリー見送り</li>
+        <li class="done-task"><span class="icon">✓</span>Filter A (YZY型): |counter_fr| &gt; 0.05%/h かつ HL と同符号 → SKIP</li>
+        <li class="done-task"><span class="icon">✓</span>Filter B (AERO型): |counter_fr| ≈ 0 のとき spread 許容を 0.10% に厳格化</li>
+        <li class="done-task"><span class="icon">✓</span>N=0 リスタート: 全ポジ手動解消・state.json 初期化・daily report も 4/24 以降集計</li>
+      </ul>
+
+      <div class="section-label">検証 TODO</div>
+      <ul class="tasks">
+        <li class="active-task"><span class="icon">▶</span>新戦略で N=30〜50 トレード蓄積中（月40〜60本想定 / 30分スキャン）</li>
+        <li class="todo"><span class="icon">▸</span>実 net 勝率 70〜80% を確認（現在の推定利回り +0.3〜+0.4%/月 at $360）</li>
+        <li class="todo"><span class="icon">▸</span>EMERGENCY / TIMEOUT の発動頻度をモニタリング（パラメータ微調整の判断材料）</li>
         <li class="todo"><span class="icon">▸</span>銘柄名正規化（1000SHIB↔kSHIB 等）で 92→96銘柄対応</li>
       </ul>
-      <div class="profit-box">
-        <div class="label">コスト構造（往復手数料）</div>
-        <div class="value">HL taker 0.09% + Lighter 0% = 0.09%／ 月次期待利回り ~4.7%（$360投入）</div>
+
+      <div class="section-label">エントリー条件（現行 / 2026-04-24〜）</div>
+      <div style="background:#0d0d1a;border:1px solid #4a9eff22;border-radius:6px;padding:14px 16px;margin-top:6px;font-size:0.82em;line-height:1.8;">
+        <table style="width:100%;border-collapse:collapse;color:#999;">
+          <tr><td style="color:#4a9eff;width:46%;padding:2px 0;">net FR 閾値</td><td><b style="color:#fff;">≥ 0.015%/h</b>（2回確認の平均）</td></tr>
+          <tr><td style="color:#4a9eff;">片側 FR 上限</td><td>|HL_fr| / |Lighter_fr| どちらも <b style="color:#fff;">≤ 0.5%/h</b>（スパイク除外）</td></tr>
+          <tr><td style="color:#4a9eff;">スプレッド許容</td><td>通常 <b style="color:#fff;">≤ 0.15%</b>（Filter B 発動時は ≤ 0.10%）</td></tr>
+          <tr><td style="color:#4a9eff;">同時保有上限</td><td><b style="color:#fff;">4ポジ</b>まで（優先度: net FR 降順）</td></tr>
+          <tr><td style="color:#4a9eff;">レジームストップ</td><td>閾値超え銘柄数 <b style="color:#fff;">< 3</b> なら全スキャンをスキップ</td></tr>
+          <tr><td style="color:#e74c3c;">Filter A (YZY型)</td><td>|Lighter_fr| &gt; 0.05%/h かつ HL と同符号 → <b style="color:#e74c3c;">SKIP</b></td></tr>
+          <tr><td style="color:#e74c3c;">Filter B (AERO型)</td><td>|Lighter_fr| &lt; 0.002%/h かつ spread &gt; 0.10% → <b style="color:#e74c3c;">SKIP</b></td></tr>
+        </table>
       </div>
-      <div class="warn-box">物理制約：HL 229銘柄 × Lighter 160銘柄 → arb可能 92銘柄が上限（他68はHLに該当ペアなし）</div>
+
+      <div class="section-label" style="margin-top:14px;">決済条件（現行 / 2026-04-24〜）</div>
+      <div style="background:#0d0d1a;border:1px solid #4a9eff22;border-radius:6px;padding:14px 16px;margin-top:6px;font-size:0.82em;line-height:1.8;">
+        <table style="width:100%;border-collapse:collapse;color:#999;">
+          <tr><td style="color:#4a9eff;width:46%;padding:2px 0;">最低保有時間</td><td><b style="color:#fff;">6h</b>（未満は常に HOLD）</td></tr>
+          <tr><td style="color:#2ecc71;">通常 EXIT（FLIP）</td><td>BE 達成（累積funding ≥ cost×1.2） かつ net_fr &lt; 0 で決済</td></tr>
+          <tr><td style="color:#e74c3c;">緊急 EXIT（EMERGENCY）</td><td>net_fr &lt; <b style="color:#e74c3c;">-0.05%/h</b> の大幅逆転 → BE 未達でも即 EXIT</td></tr>
+          <tr><td style="color:#f5a623;">強制 EXIT（TIMEOUT）</td><td><b style="color:#f5a623;">24h</b> 経過しても BE 未達 → 強制損切り</td></tr>
+          <tr><td style="color:#4a9eff;">BE 基準</td><td>累積 funding ≥ 片道コスト × <b style="color:#fff;">1.2</b>（$90 サイズで約 $0.076）</td></tr>
+        </table>
+        <div style="margin-top:8px;color:#555;font-size:0.9em;">最悪損失の目安: EMERGENCY 発動でも最大 ~-$0.27/pos（6h × 0.05%/h × $90）</div>
+      </div>
+
+      <div class="info-box" style="margin-top:12px;">
+        <div class="label">コスト構造（往復手数料）</div>
+        <div class="value">HL taker 0.07%（0.035%×2） + Lighter 0% = $0.063/取引（$90サイズ）<br>
+        BE 到達時間 = 0.063×1.2 / (0.00015 × 90) ≈ 5.6h</div>
+      </div>
+      <div class="warn-box">⚠ $90 で N=30〜50 溜まるまでパラメータは触らない。サイズ拡大もこのフェーズでは保留。物理制約: arb可能 92銘柄が上限</div>
     </div>
   </div>
 
@@ -194,38 +232,20 @@
     <div class="phase-card">
       <div class="phase-header">
         <span class="phase-tag tag-pending">NEXT</span>
-        <span class="phase-title">Phase 6 ── トライアル検証 &amp; データ蓄積</span>
-        <span class="phase-meta">〜2週間（4/19〜5/3目安）</span>
+        <span class="phase-title">Phase 7 ── 再最適化 &amp; スケールアップ判断</span>
+        <span class="phase-meta">N=50 達成後</span>
       </div>
       <ul class="tasks">
-        <li class="todo"><span class="icon">▸</span>「この設計で稼げるか」を淡々と検証（ロット拡大は保留）</li>
-        <li class="todo"><span class="icon">▸</span>N=30件 トレード蓄積（trades.csv / pnl_log.csv）</li>
-        <li class="todo"><span class="icon">▸</span>実測ベースで月次利回り確定（現在の推定 +4.7% / $360）</li>
-        <li class="todo"><span class="icon">▸</span>analyze_trades.py で entry_net_fr バケット別勝率レビュー</li>
-        <li class="todo"><span class="icon">▸</span>停止基準の確認（3連敗通知 / 週-3% DD で手動停止）</li>
-      </ul>
-      <div class="warn-box">⚠ この期間はパラメータを触らない（サンプル不足での最適化は過剰適合の温床）</div>
-    </div>
-  </div>
-
-  <div class="phase pending">
-    <div class="phase-dot"></div>
-    <div class="phase-card">
-      <div class="phase-header">
-        <span class="phase-tag tag-pending">FUTURE</span>
-        <span class="phase-title">Phase 7 ── 再最適化 &amp; 動的閾値</span>
-        <span class="phase-meta">2〜4週間後</span>
-      </div>
-      <ul class="tasks">
-        <li class="todo"><span class="icon">▸</span>Lighter 単独バックテスト → MIN_FR / confirm / max_hold 再検証</li>
-        <li class="todo"><span class="icon">▸</span>レジーム検知（HL全体FR中央値・ボラで閾値可変）</li>
-        <li class="todo"><span class="icon">▸</span>銘柄別サイジング（過去勝率・Lighter板厚で配分）</li>
-        <li class="todo"><span class="icon">▸</span>FR 大きさ連動ポジションサイズ（0.1%/h超は倍、0.05%/h付近は半分）</li>
-        <li class="todo"><span class="icon">▸</span>レバレッジ動的化（保有時間・相関実績を反映）</li>
+        <li class="todo"><span class="icon">▸</span>N=50 の実 net 勝率・利回りで「Go/No-Go」判断</li>
+        <li class="todo"><span class="icon">▸</span>合格ライン: net 勝率 65%以上 かつ 月利 +0.2% 以上</li>
+        <li class="todo"><span class="icon">▸</span>レジーム別パラメータ（高FR期/低FR期で閾値可変）</li>
+        <li class="todo"><span class="icon">▸</span>銘柄別サイジング（過去勝率・板厚で配分）</li>
+        <li class="todo"><span class="icon">▸</span>サイズ拡大: $90/pos → $1,000/pos（ロジックはサイズ非依存のため直接移行可）</li>
+        <li class="todo"><span class="icon">▸</span>$5,000/pos 以上を狙う場合は BE_MARGIN / MAX_SPREAD / Filter B をスリッページ込みで再キャリブレ</li>
       </ul>
       <div class="profit-box">
-        <div class="label">発動条件</div>
-        <div class="value">累積 PnL $100〜$500 達成後に着手（サンプル確保）</div>
+        <div class="label">$1,000/pos 移行時の期待収益</div>
+        <div class="value">月利 +0.3〜+0.4% × $4,000（4pos）= 月 +$12〜$16（$90 比 11x）</div>
       </div>
     </div>
   </div>
@@ -239,13 +259,12 @@
         <span class="phase-meta">Month 2〜3+</span>
       </div>
       <ul class="tasks">
-        <li class="todo"><span class="icon">▸</span>サイジング拡大（$90 → $300/pos、MAX 4維持）</li>
-        <li class="todo"><span class="icon">▸</span>運用規模 $300/pos × 4銘柄 → 月$70〜140 ターゲット（実測利回り次第）</li>
-        <li class="todo"><span class="icon">▸</span>X フォロワー 500人 → 有料 Discord / note シグナル販売</li>
+        <li class="todo"><span class="icon">▸</span>サイジング $1,000/pos × 4銘柄 → 月$12〜$16 ターゲット</li>
+        <li class="todo"><span class="icon">▸</span>実績ベースで段階的に $3,000〜$5,000/pos まで引き上げ</li>
+        <li class="todo"><span class="icon">▸</span>X フォロワー 500人 → 有料 Discord / note シグナル販売（月$100〜300）</li>
         <li class="todo"><span class="icon">▸</span>コードOSS化 → GitHub Sponsors / 受託</li>
-        <li class="todo"><span class="icon">▸</span>X 広告収益（フォロワー数次第）</li>
       </ul>
-      <div class="warn-box">⚠ サイズ拡大前に銘柄ごとの Lighter 板厚・スリッページ検証必須。29ETH→月45万円は流動性の壁により非現実的、現実的な天井は月$300〜600</div>
+      <div class="warn-box">⚠ サイズ拡大前に銘柄ごとの板厚・スリッページ検証必須。29ETH→月45万円は流動性の壁で非現実的。現実的な天井は月$300〜600</div>
     </div>
   </div>
 
@@ -256,21 +275,21 @@
   <div class="summary-grid">
     <div>
       <div class="s-label">フェーズ</div>
-      <div class="s-value">Phase 5 稼働中</div>
+      <div class="s-value">Phase 6<br><span style="font-size:0.75em;color:#f5a623;">戦略刷新後 稼働中</span></div>
     </div>
     <div>
-      <div class="s-label">運用実績（4/18〜）</div>
-      <div class="s-value">N=7 全勝<br><span style="color:#2ecc71;">累計 +$3.17</span><br><span style="font-size:0.75em;color:#888;">$360運用・約20時間</span></div>
+      <div class="s-label">現状（4/24 リスタート）</div>
+      <div class="s-value">N=0 スタート<br><span style="font-size:0.75em;color:#888;">新戦略で累積中</span><br><span style="font-size:0.7em;color:#555;">$360運用 / $90/pos × 4</span></div>
     </div>
     <div>
       <div class="s-label">次のアクション</div>
-      <div class="s-value" style="font-size:0.9em;">2週間トライアル検証 → 実利回り確定（N=30目標）</div>
+      <div class="s-value" style="font-size:0.9em;">N=50 まで観察<br><span style="font-size:0.75em;color:#888;">目標: net勝率70〜80%</span></div>
     </div>
   </div>
 </div>
 
 <div class="footer">
-  MindRaid | AI予測 × 仮想通貨取引 @logiQ_Alpha ── Built with Claude Code
+  MindRaid | FR Arb × Claude Code @logiQ_Alpha ── Built with Claude Code
 </div>
 
 </body>

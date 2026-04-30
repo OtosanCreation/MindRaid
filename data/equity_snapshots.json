@@ -1,14 +1,86 @@
 [
   {
     "date_utc": "2026-04-21",
-    "timestamp_utc": "2026-04-21 14:10:25",
-    "hl_total": 613.24,
-    "hl_usdc": 491.59,
-    "hl_spot": 121.65,
-    "lighter_total": 380.37,
+    "timestamp_utc": "2026-04-21 14:12:07",
+    "hl_total": 613.44,
+    "hl_usdc": 491.64,
+    "hl_spot": 121.81,
+    "lighter_total": 380.32,
     "n": 4,
     "wins": 1,
     "losses": 3,
     "real_trade": 871.96
+  },
+  {
+    "date_utc": "2026-04-22",
+    "timestamp_utc": "2026-04-22 14:00:00",
+    "hl_total": 615.6,
+    "hl_usdc": 488.07,
+    "hl_spot": 127.53,
+    "lighter_total": 370.89,
+    "n": 15,
+    "wins": 4,
+    "losses": 11,
+    "real_trade": 858.96
+  },
+  {
+    "date_utc": "2026-04-23",
+    "timestamp_utc": "2026-04-23 14:00:00",
+    "hl_total": 614.16,
+    "hl_usdc": 491.78,
+    "hl_spot": 122.38,
+    "lighter_total": 372.58,
+    "n": 19,
+    "wins": 4,
+    "losses": 15,
+    "real_trade": 864.36
+  },
+  {
+    "date_utc": "2026-04-24",
+    "timestamp_utc": "2026-04-24 14:00:00",
+    "hl_total": 600.15,
+    "hl_usdc": 477.92,
+    "hl_spot": 122.23,
+    "lighter_total": 378.4,
+    "n": 0,
+    "wins": 0,
+    "losses": 0,
+    "real_trade": 856.32
+  },
+  {
+    "date_utc": "2026-04-25",
+    "timestamp_utc": "2026-04-25 14:00:00",
+    "hl_total": 598.18,
+    "hl_usdc": 475.97,
+    "hl_spot": 122.22,
+    "lighter_total": 378.97,
+    "n": 1,
+    "wins": 1,
+    "losses": 0,
+    "real_trade": 854.94
+  },
+  {
+    "date_utc": "2026-04-26",
+    "timestamp_utc": "2026-04-26 14:00:00",
+    "hl_total": 599.15,
+    "hl_usdc": 475.97,
+    "hl_spot": 123.18,
+    "lighter_total": 378.97,
+    "n": 1,
+    "wins": 1,
+    "losses": 0,
+    "real_trade": 854.94
+  },
+  {
+    "date_utc": "2026-04-27",
+    "timestamp_utc": "2026-04-27 14:00:00",
+    "hl_total": 597.97,
+    "hl_usdc": 475.97,
+    "hl_spot": 122.01,
+    "lighter_total": 378.97,
+    "n": 1,
+    "wins": 1,
+    "losses": 0,
+    "real_trade": 854.94
   }
 ]

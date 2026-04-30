@@ -34,6 +34,10 @@ DATA_DIR = Path(__file__).parent / "data"
 SNAP_PATH = DATA_DIR / "equity_snapshots.json"
 TRADES_CSV = DATA_DIR / "trades.csv"
 
+# 戦略切替リスタート基準日 (N=0 開始点)。この日時以降の close のみ集計。
+# 2026-04-24: BE-hold + 閾値0.015% + レジームストップ + FilterA/B 投入、手動で全ポジ解消。
+RESTART_BASELINE_UTC = datetime(2026, 4, 24, 0, 0, 0, tzinfo=timezone.utc)
+
 TG_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TG_CHAT = os.environ.get("TELEGRAM_CHAT_ID", "")
 HL_ADDR = os.environ.get("HL_WALLET_ADDRESS", "")
@@ -129,6 +133,8 @@ def count_trades_until(end_dt: datetime) -> tuple[int, int, int]:
             except Exception:
                 continue
             if closed_dt > end_dt:
+                continue
+            if closed_dt < RESTART_BASELINE_UTC:
                 continue
             n += 1
             try:

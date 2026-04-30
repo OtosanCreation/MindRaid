@@ -1,13 +1,13 @@
 """
 funding_logger.py
-HL全銘柄（229）と MEXC共通銘柄（約191）の predictedFunding を毎時取得してCSVに追記。
+HL全銘柄（229）と Lighter共通銘柄の predictedFunding + mid_price を毎時取得してCSVに追記。
 
-HL CSV:   data/funding_log.csv
-  列: timestamp_utc, coin, funding_rate_1h, funding_rate_8h, funding_rate_24h,
+HL CSV:   data/funding_log_YYYY-MM.csv  （月次ローテーション）
+  列: timestamp_utc, coin, mid_price, funding_rate_1h, funding_rate_8h, funding_rate_24h,
       interval_hours, taker_ok, maker_ok
 
-MEXC CSV: data/mexc_funding_log.csv
-  列: timestamp_utc, coin, funding_rate_1h, next_settle_time
+Lighter CSV: data/lighter_funding_log.csv
+  列: timestamp_utc, coin, funding_rate_1h
 """
 
 import csv
@@ -22,11 +22,21 @@ VENUE     = "HlPerp"
 TAKER_RT  = 0.00045 * 2   # 往復 taker 0.09%（HL実績: 0.045%/side）
 MAKER_RT  = 0.00015 * 2   # 往復 maker 0.03%（HL実績: 0.015%/side）
 DATA_DIR  = os.path.join(os.path.dirname(__file__), "data")
-CSV_PATH         = os.path.join(DATA_DIR, "funding_log.csv")
+
+# 月次ローテーション: funding_log_YYYY-MM.csv
+def hl_csv_path(ts_str: str = None) -> str:
+    """ts_str が None なら現在月、'YYYY-MM-DD HH:MM:SS' 形式なら対応月のパスを返す"""
+    if ts_str:
+        month = ts_str[:7]  # 'YYYY-MM'
+    else:
+        month = datetime.now(timezone.utc).strftime("%Y-%m")
+    return os.path.join(DATA_DIR, f"funding_log_{month}.csv")
+
 MEXC_CSV_PATH    = os.path.join(DATA_DIR, "mexc_funding_log.csv")
 LIGHTER_CSV_PATH = os.path.join(DATA_DIR, "lighter_funding_log.csv")
+
 FIELDNAMES = [
-    "timestamp_utc", "coin",
+    "timestamp_utc", "coin", "mid_price",
     "funding_rate_1h", "funding_rate_8h", "funding_rate_24h",
     "interval_hours", "taker_ok", "maker_ok",
 ]
@@ -41,18 +51,23 @@ LIGHTER_FIELDNAMES = [
 
 
 def fetch_hl_funding(info: Info) -> list[dict]:
-    raw = info.post("/info", {"type": "predictedFundings"})
+    """HL全銘柄の predictedFunding + mid_price を取得"""
+    raw  = info.post("/info", {"type": "predictedFundings"})
+    mids = info.all_mids()  # {coin: mid_price_str}
+
     result = []
     for item in raw:
         coin, venues = item[0], item[1]
         for venue_name, data in venues:
             if venue_name != VENUE:
                 continue
-            rate     = float(data["fundingRate"])
-            interval = int(data["fundingIntervalHours"])
-            rate_1h  = rate / interval
+            rate      = float(data["fundingRate"])
+            interval  = int(data["fundingIntervalHours"])
+            rate_1h   = rate / interval
+            mid_price = float(mids.get(coin, 0) or 0)
             result.append({
                 "coin":            coin,
+                "mid_price":       mid_price,
                 "funding_rate_1h": rate_1h,
                 "funding_rate_8h": rate_1h * 8,
                 "funding_rate_24h": rate_1h * 24,
@@ -100,15 +115,18 @@ def fetch_mexc_funding(target_coins):
     return results
 
 
-def append_csv(rows: list[dict], ts: str) -> None:
+def append_csv(rows: list[dict], ts: str) -> str:
+    """HL funding_log を月次ファイルに追記。使用したファイルパスを返す"""
     os.makedirs(DATA_DIR, exist_ok=True)
-    write_header = not os.path.exists(CSV_PATH)
-    with open(CSV_PATH, "a", newline="") as f:
+    path = hl_csv_path(ts)
+    write_header = not os.path.exists(path)
+    with open(path, "a", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
         if write_header:
             writer.writeheader()
         for row in rows:
             writer.writerow({"timestamp_utc": ts, **row})
+    return path
 
 
 def append_mexc_csv(rows: list[dict], ts: str) -> None:
@@ -162,17 +180,18 @@ def main() -> None:
     ts   = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     info = Info(skip_ws=True)
 
-    # ── HL 全銘柄 ──────────────────────────────────────
+    # ── HL 全銘柄（FR + mid_price）──────────────────────────────
     hl_rows = fetch_hl_funding(info)
-    append_csv(hl_rows, ts)
+    path = append_csv(hl_rows, ts)
     hl_coins = {r["coin"] for r in hl_rows}
     taker_hits = [r for r in hl_rows if r["taker_ok"]]
     maker_hits  = [r for r in hl_rows if r["maker_ok"]]
+    file_mb = os.path.getsize(path) / 1024 / 1024
     print(f"--- HL ({len(hl_rows)}銘柄) ---")
     print(f"  taker超え: {len(taker_hits)}銘柄  maker超え: {len(maker_hits)}銘柄")
-    print(f"  → {CSV_PATH} に追記")
+    print(f"  → {path} に追記 ({file_mb:.1f} MB)")
 
-    # ── Lighter HL共通銘柄 ──────────────────────────────
+    # ── Lighter HL共通銘柄 ──────────────────────────────────────
     print("--- Lighter ---")
     try:
         lighter_rows = fetch_lighter_funding(target_coins=hl_coins)

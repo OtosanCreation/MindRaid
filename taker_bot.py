@@ -47,17 +47,36 @@ if _os.path.exists(_os.path.expanduser("~/MindRaid/STOP")):
 EXCHANGE_MODE   = os.environ.get("EXCHANGE_MODE", "LIGHTER").upper()  # "LIGHTER" or "MEXC"
 TRADE_SIZE_USD  = float(os.environ.get("TRADE_SIZE_USD", "100"))  # 1ポジションUSD
 MAX_POSITIONS   = int(os.environ.get("MAX_POSITIONS", "4"))        # 最大同時ポジション数
-MIN_FR_1H       = 0.00005  # エントリー最小 net FR閾値: 0.005%/h（修正後 true 1h レート基準 / 12hでコスト回収見込み）
+MIN_FR_1H       = 0.00015  # エントリー最小 net FR閾値: 0.015%/h（BE時間 ~4.7h 目安）2026-04-24 0.005%→0.015%
 MIN_HOLD_H      = 6       # 最低保有時間: FRフリップ以外はこれ未満で決済しない
+MAX_HOLD_H      = 24      # 最大保有時間: BE未達でも 24h で強制損切り（塩漬け防止）2026-04-24 追加
+BE_MARGIN       = 1.2     # BE判定マージン: 累積funding >= cost × 1.2 で「手数料回収済」扱い 2026-04-24 追加
+EMERGENCY_EXIT_FR = -0.0005  # 緊急カット閾値: net_fr < -0.05%/h なら BE 未達でも即 EXIT 2026-04-24 追加
+MIN_REGIME_CANDIDATES = 3 # レジームストップ閾値: 市場候補数 < これなら新規エントリー見送り 2026-04-24 追加
 MAX_LEG_FR      = 0.005   # 片側FR上限: HL/Lighter どちらか |FR|>0.5%/h の銘柄はスパイク扱いで見送り
 EXIT_FR_1H      = -1e9    # 旧: 閾値割れEXIT は廃止。フリップ(<0)のみEXIT。互換のため定数は残す
 EXIT_FR_RECOVERED = -1e9  # 同上
+# 負けパターン除外フィルター（2026-04-24 N=20 分析から抽出）
+FILTER_A_COUNTER_FR = 0.0005  # YZY型: |counter_fr| > 0.0005 かつ hl_fr と同符号 → スキップ
+FILTER_B_COUNTER_FR = 0.00002 # AERO/AXS型: |counter_fr| < 0.00002 かつ |spread| > 0.001 → スキップ
+FILTER_B_SPREAD     = 0.001
 # MAX_ENTRY_SPREAD: LIGHTER では手数料0のため閾値を小さくしても良いが、
 # 価格スリッページ自体のリスクは同じなので 0.15% を維持
 MAX_ENTRY_SPREAD = 0.0015   # エントリー時許容スプレッド: 0.15%（不利側。超えたらロールバック）
 
 DATA_DIR     = os.path.join(os.path.dirname(__file__), "data")
-FUNDING_CSV  = os.path.join(DATA_DIR, "funding_log.csv")
+def _hl_funding_csv_path() -> str:
+    """月次ローテーション対応: funding_log_YYYY-MM.csv を返す（なければ前月を探す）"""
+    from datetime import datetime, timezone, timedelta
+    now = datetime.now(timezone.utc)
+    for delta in [0, -1]:  # 当月 → 前月の順で探す
+        month = (now.replace(day=1) + timedelta(days=delta*32)).strftime("%Y-%m")
+        p = os.path.join(DATA_DIR, f"funding_log_{month}.csv")
+        if os.path.exists(p):
+            return p
+    return os.path.join(DATA_DIR, f"funding_log_{now.strftime('%Y-%m')}.csv")  # 存在しなくても当月パスを返す
+
+FUNDING_CSV  = _hl_funding_csv_path()
 MEXC_FUNDING_CSV    = os.path.join(DATA_DIR, "mexc_funding_log.csv")
 LIGHTER_FUNDING_CSV = os.path.join(DATA_DIR, "lighter_funding_log.csv")
 STATE_FILE   = os.path.join(DATA_DIR, "taker_state.json")
@@ -841,6 +860,17 @@ def main():
     state     = load_state()
     positions = state["positions"]
 
+    # ── 起動時アナウンス（state.pending_announcement があれば Telegram に流して消す）
+    announcement = state.get("pending_announcement")
+    if announcement:
+        try:
+            tg(announcement)
+            print("[ANNOUNCE] pending_announcement 送信完了")
+        except Exception as _e:
+            print(f"[WARN] announcement 送信失敗: {_e}")
+        state.pop("pending_announcement", None)
+        save_state(state)
+
     print(f"=== EXCHANGE_MODE = {EXCHANGE_MODE} ===")
 
     wallet   = Account.from_key(HL_PRIVATE_KEY)
@@ -1025,12 +1055,37 @@ def main():
         cost       = cost_rate * pos["size_usd"]
         cost_recovered = est_fr_now >= cost
 
-        # 新ロジック: MIN_HOLD_H 未満は無条件ホールド、以降は net_fr が負に転じた時のみ EXIT
-        # 旧の EXIT_FR_1H / EXIT_FR_RECOVERED しきい値は廃止（コスト負けの主因だった）
+        # 新ロジック（2026-04-24 BE-hold 導入）:
+        #   1. MIN_HOLD_H (6h) 未満 → 無条件ホールド
+        #   2. BE未達（est_fr < cost × BE_MARGIN）:
+        #        - MAX_HOLD_H (24h) 未満 → ホールド（FR逆転しても耐える）
+        #        - MAX_HOLD_H 以上      → 強制損切り EXIT（塩漬け防止）
+        #   3. BE達成 → 従来通り net_fr 反転(<0)で EXIT
+        be_threshold = cost * BE_MARGIN
+        be_reached   = est_fr_now >= be_threshold
+        timeout_exit = False
+        emergency_exit = False
         if dur_h < MIN_HOLD_H:
-            exit_threshold = -1e9  # 初期 6h は絶対にホールド
+            should_exit = False
+            hold_phase  = "min_hold"
+        elif current_net_fr < EMERGENCY_EXIT_FR:
+            # 大幅逆転（-0.05%/h 以下）: BE 未達でも即カット（大怪我回避）
+            should_exit = True
+            emergency_exit = True
+            hold_phase  = "emergency_cut"
+        elif not be_reached:
+            if dur_h >= MAX_HOLD_H:
+                should_exit = True
+                timeout_exit = True
+                hold_phase  = "timeout_cut_loss"
+            else:
+                should_exit = False
+                hold_phase  = "be_pending"
         else:
-            exit_threshold = 0.0   # 以降はフリップ(<0)のみ EXIT
+            should_exit = (current_net_fr < 0)
+            hold_phase  = "be_reached"
+        # 旧 exit_threshold 参照互換（表示用）
+        exit_threshold = 0.0 if be_reached and dur_h >= MIN_HOLD_H else -1e9
 
         # ── 表示用：方向別の受取額に変換（計算値 current_net_fr には影響なし）──
         # short_fr: HL SHORT → +hl_fr 受取 / Counter LONG → -counter_fr 受取
@@ -1042,10 +1097,12 @@ def main():
             hl_earn      = -hl_fr_now
             counter_earn = +counter_fr_now
 
-        if current_net_fr >= exit_threshold:
-            cost_tag = "手数料ぶん回収済み" if cost_recovered else "手数料まだ回収中"
-            if dur_h < MIN_HOLD_H:
+        if not should_exit:
+            cost_tag = "手数料ぶん回収済み" if be_reached else "手数料まだ回収中（BEまで保有）"
+            if hold_phase == "min_hold":
                 hold_reason = f"買ってから {MIN_HOLD_H}時間経つまでは必ず持ち続ける設定（あと {MIN_HOLD_H - dur_h:.1f}時間）"
+            elif hold_phase == "be_pending":
+                hold_reason = f"まだ手数料回収前（BE到達まで保有、最長 {MAX_HOLD_H}h まで。残り {MAX_HOLD_H - dur_h:.1f}h）"
             else:
                 hold_reason = "まだプラスの金利がもらえてるから継続（マイナスになったら決済）"
             print(
@@ -1080,18 +1137,39 @@ def main():
             )
             continue
 
-        # EXIT 条件: MIN_HOLD_H 経過後に net FR が負転落
+        # EXIT 条件: BE達成後のフリップ / BE未達で MAX_HOLD_H 超過 / 大幅逆転による緊急カット
+        if emergency_exit:
+            exit_label = "EMERGENCY"
+        elif timeout_exit:
+            exit_label = "TIMEOUT"
+        else:
+            exit_label = "FLIP"
         print(
-            f"[EXIT] {coin}  netFR={current_net_fr*100:+.4f}%/h "
+            f"[EXIT:{exit_label}] {coin}  netFR={current_net_fr*100:+.4f}%/h "
             f"(HL={hl_fr_now*100:+.4f}%/h, {counter_name}={counter_fr_now*100:+.4f}%/h) "
-            f"→ フリップ決済 (保有 {dur_h:.1f}h)"
+            f"→ 決済 (保有 {dur_h:.1f}h)"
         )
-        tg(
-            f"🔴 {coin} これから決済します\n"
-            f"理由: 金利がマイナスに反転しちゃったので損する前に売り（時給 ${current_net_fr*pos['size_usd']:+.3f}）\n"
-            f"保有時間: {dur_h:.1f}時間\n"
-            f"稼いだ金利 ${est_fr_now:.2f}｜手数料 ${cost:.2f}｜手取り ${est_fr_now - cost:+.2f}"
-        )
+        if emergency_exit:
+            tg(
+                f"🔴 {coin} これから決済します（EMERGENCY損切り）\n"
+                f"理由: net_fr {current_net_fr*100:+.4f}%/h が緊急カット閾値 {EMERGENCY_EXIT_FR*100:.4f}%/h を下回った（大怪我回避）\n"
+                f"保有時間: {dur_h:.1f}時間\n"
+                f"稼いだ金利 ${est_fr_now:.2f}｜手数料 ${cost:.2f}｜手取り ${est_fr_now - cost:+.2f}"
+            )
+        elif timeout_exit:
+            tg(
+                f"🔴 {coin} これから決済します（TIMEOUT損切り）\n"
+                f"理由: {MAX_HOLD_H}h 経過しても手数料を回収できなかったので損切り\n"
+                f"保有時間: {dur_h:.1f}時間\n"
+                f"稼いだ金利 ${est_fr_now:.2f}｜手数料 ${cost:.2f}｜手取り ${est_fr_now - cost:+.2f}"
+            )
+        else:
+            tg(
+                f"🟡 {coin} これから決済します（FLIP — 利確）\n"
+                f"理由: 手数料回収済み（BE達成）のうえで金利がマイナス転落 → 利確タイミング\n"
+                f"保有時間: {dur_h:.1f}時間\n"
+                f"稼いだ金利 ${est_fr_now:.2f}｜手数料 ${cost:.2f}｜手取り ${est_fr_now - cost:+.2f}"
+            )
 
         # ── 実ポジション事前チェック ──
         hl_has_pos = coin in hl_open_coins
@@ -1231,7 +1309,7 @@ def main():
                 pos, coin, ts, dur_h,
                 exit_hl_fr=hl_fr_now, exit_counter_fr=counter_fr_now, exit_net_fr=current_net_fr,
                 est_funding=est_fr, est_cost=est_cost, est_net=net,
-                exit_reason="normal",
+                exit_reason=("emergency" if emergency_exit else ("timeout" if timeout_exit else "normal")),
                 actual_hl_funding=actual_hl_fund,
                 actual_lighter_funding=actual_lt_fund,
             )
@@ -1243,8 +1321,15 @@ def main():
             check_losing_streak(state, tg, n=3)
 
             result_emoji = "💰 黒字ゲット！" if net >= 0 else "😓 赤字..."
+            if emergency_exit:
+                exit_type_label = "🚨 EMERGENCY（大幅逆転カット）"
+            elif timeout_exit:
+                exit_type_label = "⏰ TIMEOUT（24h 強制損切り）"
+            else:
+                exit_type_label = "✅ FLIP（BE達成後の利確）"
             tg(
                 f"🔴 {coin} 決済完了！ {result_emoji}\n"
+                f"決済種別: {exit_type_label}\n"
                 f"保有時間: {dur_h:.1f}時間\n"
                 f"稼いだ金利: +${est_fr:.2f}\n"
                 f"手数料: -${est_cost:.2f}\n"
@@ -1289,6 +1374,25 @@ def main():
     if hold_lines:
         tg("📊 保有中の銘柄まとめ\n\n" + "\n\n".join(hold_lines))
 
+    # ── レジームストップ（2026-04-24 追加）──────────────────────
+    # 市場全体の候補数（保有中も含む）をカウント: 少なすぎる日は新規エントリー見送り
+    market_candidate_count = 0
+    for _coin, _rows in signals.items():
+        if len(_rows) < 2:
+            continue
+        _avg_short = sum(r["net_short_1h"] for r in _rows) / len(_rows)
+        _dir = "short_fr" if _avg_short >= 0 else "long_fr"
+        _sel = [float(r["net_short_1h"] if _dir == "short_fr" else r["net_long_1h"]) for r in _rows]
+        _avg = sum(_sel) / len(_sel)
+        if _avg >= MIN_FR_1H and all(v >= MIN_FR_1H for v in _sel):
+            market_candidate_count += 1
+    if market_candidate_count < MIN_REGIME_CANDIDATES:
+        print(f"[REGIME-STOP] 市場候補 {market_candidate_count} < {MIN_REGIME_CANDIDATES} → 新規エントリー見送り")
+        tg(f"🟡 レジーム不良: 市場候補 {market_candidate_count}銘柄 (< {MIN_REGIME_CANDIDATES}) \n今サイクルは新規エントリーせず待機")
+        # エントリーループ自体をスキップ（決済は既に上で処理済み）
+        save_state(state)
+        return
+
     # ── エントリーチェック ──────────────────────────────────────
     # まず候補を抽出して netFR 降順でソート（MAX_POSITIONS 到達時に最優位を取りこぼさない）
     entry_candidates = []  # [(avg_net_fr_1h, coin, rows, direction, selected_net)]
@@ -1323,6 +1427,10 @@ def main():
         avg_ctr_fr_entry = sum(float(r.get("counter_fr_1h", r.get("mexc_fr_1h", 0))) for r in rows) / len(rows)
         if abs(avg_hl_fr_entry) > MAX_LEG_FR or abs(avg_ctr_fr_entry) > MAX_LEG_FR:
             print(f"[SKIP] {coin} 片側FRスパイク (HL={avg_hl_fr_entry*100:+.3f}%/h, ctr={avg_ctr_fr_entry*100:+.3f}%/h, 上限={MAX_LEG_FR*100:.2f}%/h)")
+            continue
+        # Filter A (YZY型): counter強 & 同符号 → FR差はすぐ縮む（負けパターン）
+        if abs(avg_ctr_fr_entry) > FILTER_A_COUNTER_FR and (avg_hl_fr_entry * avg_ctr_fr_entry) > 0:
+            print(f"[SKIP:FilterA] {coin} counter強＋同符号 (HL={avg_hl_fr_entry*100:+.4f}%/h, ctr={avg_ctr_fr_entry*100:+.4f}%/h)")
             continue
         entry_candidates.append((avg_net_fr_1h, coin, rows, direction, selected_net))
 
@@ -1437,12 +1545,18 @@ def main():
         spread_pct = unfavorable_ratio * 100
         print(f"  スプレッド: HL={hl_px} {counter_name_enter}={ct_px} 不利側={spread_pct:+.4f}%")
 
+        # Filter B (AERO/AXS型): counter_fr ≈ 0 のときは spread 閾値を厳しくする
+        effective_max_spread = MAX_ENTRY_SPREAD
+        filter_b_active = abs(avg_counter_fr_1h) < FILTER_B_COUNTER_FR
+        if filter_b_active:
+            effective_max_spread = FILTER_B_SPREAD
         # abs() でどちら向きの異常スプレッドも弾く（価格スケールバグ等のデータエラー防御）
-        if abs(unfavorable_ratio) > MAX_ENTRY_SPREAD:
-            print(f"  [ROLLBACK] スプレッド過大 ({spread_pct:.4f}% > {MAX_ENTRY_SPREAD*100:.2f}%) → 両脚クローズ")
+        if abs(unfavorable_ratio) > effective_max_spread:
+            _tag = " [FilterB:counter弱]" if filter_b_active else ""
+            print(f"  [ROLLBACK]{_tag} スプレッド過大 ({spread_pct:.4f}% > {effective_max_spread*100:.2f}%) → 両脚クローズ")
             tg(
-                f"⚠️ ENTRY 見送り: {coin}\n"
-                f"スプレッド {spread_pct:+.4f}% > 許容 {MAX_ENTRY_SPREAD*100:.2f}%\n"
+                f"⚠️ ENTRY 見送り: {coin}{_tag}\n"
+                f"スプレッド {spread_pct:+.4f}% > 許容 {effective_max_spread*100:.2f}%\n"
                 f"HL {'売' if direction=='short_fr' else '買'}: {hl_px}\n"
                 f"{counter_name_enter} {'買' if direction=='short_fr' else '売'}: {ct_px}\n"
                 f"両脚ロールバック中..."
@@ -1547,12 +1661,17 @@ def main():
         )
         hourly_usd = avg_net_fr_1h * TRADE_SIZE_USD
         daily_usd  = hourly_usd * 24
+        entry_cost = TRADE_SIZE_USD * 0.0007  # HL taker 0.035% × 2
+        be_target  = entry_cost * BE_MARGIN
+        be_hours   = be_target / hourly_usd if hourly_usd > 0 else float("inf")
         tg(
             f"🟢 {coin} 新しく買った！\n"
             f"作戦: {strategy_jp}（価格の動きは相殺、金利だけ受け取る）\n"
             f"いまの時給: +${hourly_usd:.3f}（1日だと +${daily_usd:.2f}）\n"
+            f"手数料回収まで: 約 {be_hours:.1f}時間（${be_target:.3f} 稼いだら利確OK）\n"
             f"使った資金: ${TRADE_SIZE_USD}\n"
             f"約定価格: HL {hl_res['entry_price']:.6f} / {counter_name_enter} {ct_res['entry_price']:.6f}\n"
+            f"緊急カット水準: net_fr < {EMERGENCY_EXIT_FR*100:.2f}%/h｜強制損切り: {MAX_HOLD_H}h 後\n"
             f"\n※ HLと{counter_name_enter}両方でポジションが立っているか念のため確認してください"
         )
         # post_x: エントリー時は投稿しない（コスト削減）
